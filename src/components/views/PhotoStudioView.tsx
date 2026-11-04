@@ -16,7 +16,9 @@ import {
   Sparkles, 
   ShoppingBag,
   ExternalLink,
-  Tag
+  Tag,
+  Move,
+  Crosshair
 } from 'lucide-react';
 import { 
   PhotoShootConcept, 
@@ -68,6 +70,11 @@ export const PhotoStudioView: React.FC<PhotoStudioViewProps> = ({
   // Hidden file inputs
   const generalFileInputRef = useRef<HTMLInputElement | null>(null);
   const shotFileInputRef = useRef<HTMLInputElement | null>(null);
+
+  // Canvas Drag & Drop State
+  const canvasContainerRef = useRef<HTMLDivElement | null>(null);
+  const [draggingLightId, setDraggingLightId] = useState<string | null>(null);
+  const [autoAimEnabled, setAutoAimEnabled] = useState<boolean>(true);
 
   // New Reference form state
   const [newRef, setNewRef] = useState<{
@@ -166,6 +173,62 @@ export const PhotoStudioView: React.FC<PhotoStudioViewProps> = ({
     });
     if (template.lights.length > 0) {
       setSelectedLightId(template.lights[0].id);
+    }
+  };
+
+  // Canvas Drag & Drop Pointer Handlers
+  const handleLightPointerDown = (e: React.PointerEvent, lightId: string) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setSelectedLightId(lightId);
+    setDraggingLightId(lightId);
+    (e.currentTarget as HTMLElement).setPointerCapture(e.pointerId);
+  };
+
+  const handleCanvasPointerMove = (e: React.PointerEvent) => {
+    if (!draggingLightId || !canvasContainerRef.current) return;
+    const rect = canvasContainerRef.current.getBoundingClientRect();
+    const rawX = ((e.clientX - rect.left) / rect.width) * 100;
+    const rawY = ((e.clientY - rect.top) / rect.height) * 100;
+    const clampedX = Math.round(Math.max(6, Math.min(94, rawX)));
+    const clampedY = Math.round(Math.max(6, Math.min(94, rawY)));
+
+    let angleDeg: number | undefined = undefined;
+    if (autoAimEnabled) {
+      // Calculate angle pointing towards center (50, 50) table
+      const dx = 50 - clampedX;
+      const dy = 50 - clampedY;
+      const rad = Math.atan2(dy, dx);
+      let deg = Math.round(rad * (180 / Math.PI) - 90);
+      if (deg < 0) deg += 360;
+      angleDeg = deg;
+    }
+
+    const updatedLights = currentConcept.lights.map(l => {
+      if (l.id === draggingLightId) {
+        return {
+          ...l,
+          x: clampedX,
+          y: clampedY,
+          ...(angleDeg !== undefined ? { angle: angleDeg } : {})
+        };
+      }
+      return l;
+    });
+
+    onUpdateConcept({
+      ...currentConcept,
+      lights: updatedLights,
+      updatedAt: new Date().toISOString()
+    });
+  };
+
+  const handleLightPointerUp = (e: React.PointerEvent) => {
+    if (draggingLightId) {
+      try {
+        (e.currentTarget as HTMLElement).releasePointerCapture(e.pointerId);
+      } catch {}
+      setDraggingLightId(null);
     }
   };
 
@@ -589,26 +652,49 @@ export const PhotoStudioView: React.FC<PhotoStudioViewProps> = ({
                 </p>
               </div>
 
-              {/* Template Selector */}
-              <div className="flex items-center gap-2">
-                <span className="text-xs text-slate-400">Preset Tata Cahaya:</span>
-                <select
-                  onChange={(e) => handleApplyLightingTemplate(Number(e.target.value))}
-                  className={`px-3 py-1.5 rounded-lg border text-xs font-medium focus:outline-none focus:ring-2 focus:ring-rose-500 ${
-                    darkMode 
-                      ? 'bg-slate-800 border-slate-700 text-slate-200' 
-                      : 'bg-slate-100 border-slate-200 text-slate-800'
+              {/* Template & Drag Options */}
+              <div className="flex items-center gap-2 flex-wrap">
+                <button
+                  type="button"
+                  onClick={() => setAutoAimEnabled(!autoAimEnabled)}
+                  className={`flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-xs font-semibold border transition-colors ${
+                    autoAimEnabled
+                      ? 'bg-rose-500/20 text-rose-300 border-rose-500/40 shadow-xs'
+                      : darkMode ? 'bg-slate-800 text-slate-400 border-slate-700' : 'bg-slate-100 text-slate-600 border-slate-300'
                   }`}
+                  title="Arah sorotan lampu otomatis membidik ke meja produk di tengah"
                 >
-                  {LIGHTING_PRESET_TEMPLATES.map((tpl, idx) => (
-                    <option key={idx} value={idx}>{tpl.name}</option>
-                  ))}
-                </select>
+                  <Crosshair className={`w-3.5 h-3.5 ${autoAimEnabled ? 'text-rose-400' : 'text-slate-400'}`} />
+                  <span>Auto-Aim Meja: {autoAimEnabled ? 'ON' : 'OFF'}</span>
+                </button>
+
+                <div className="flex items-center gap-1.5">
+                  <span className="text-xs text-slate-400">Preset:</span>
+                  <select
+                    onChange={(e) => handleApplyLightingTemplate(Number(e.target.value))}
+                    className={`px-3 py-1.5 rounded-lg border text-xs font-medium focus:outline-none focus:ring-2 focus:ring-rose-500 ${
+                      darkMode 
+                        ? 'bg-slate-800 border-slate-700 text-slate-200' 
+                        : 'bg-slate-100 border-slate-200 text-slate-800'
+                    }`}
+                  >
+                    {LIGHTING_PRESET_TEMPLATES.map((tpl, idx) => (
+                      <option key={idx} value={idx}>{tpl.name}</option>
+                    ))}
+                  </select>
+                </div>
               </div>
             </div>
 
-            {/* Studio Simulation Stage */}
-            <div className="relative w-full aspect-[4/3] rounded-2xl overflow-hidden border border-slate-800 bg-slate-950 flex items-center justify-center select-none">
+            {/* Studio Simulation Stage with Interactive Drag and Drop */}
+            <div 
+              ref={canvasContainerRef}
+              onPointerMove={handleCanvasPointerMove}
+              onPointerUp={handleLightPointerUp}
+              className={`relative w-full aspect-[4/3] rounded-2xl overflow-hidden border border-slate-800 bg-slate-950 flex items-center justify-center select-none touch-none ${
+                draggingLightId ? 'cursor-grabbing' : 'cursor-default'
+              }`}
+            >
               {/* Studio Grid Lines */}
               <div 
                 className="absolute inset-0 opacity-15 pointer-events-none"
@@ -687,16 +773,22 @@ export const PhotoStudioView: React.FC<PhotoStudioViewProps> = ({
                 />
               </div>
 
-              {/* Interactive Lights on the Canvas */}
+              {/* Interactive Draggable Lights on the Canvas */}
               {currentConcept.lights.map((l) => {
                 const isSelected = l.id === selectedLightId;
+                const isDragging = l.id === draggingLightId;
                 const lightColor = getKelvinColor(l.kelvin);
                 return (
-                  <button
+                  <div
                     key={l.id}
-                    onClick={() => setSelectedLightId(l.id)}
-                    className={`absolute z-30 group flex flex-col items-center transition-transform hover:scale-110 focus:outline-none ${
-                      isSelected ? 'scale-110 z-40' : 'opacity-90'
+                    onPointerDown={(e) => handleLightPointerDown(e, l.id)}
+                    onPointerUp={handleLightPointerUp}
+                    className={`absolute z-30 group flex flex-col items-center select-none touch-none transition-transform ${
+                      isDragging 
+                        ? 'scale-125 z-50 cursor-grabbing' 
+                        : isSelected 
+                          ? 'scale-110 z-40 cursor-grab' 
+                          : 'opacity-90 hover:scale-105 cursor-grab'
                     }`}
                     style={{
                       left: `${l.x}%`,
@@ -705,39 +797,59 @@ export const PhotoStudioView: React.FC<PhotoStudioViewProps> = ({
                     }}
                   >
                     <div 
-                      className={`w-10 h-10 rounded-full flex items-center justify-center shadow-xl border-2 transition-all ${
+                      className={`w-11 h-11 rounded-full flex items-center justify-center shadow-xl border-2 transition-all relative ${
                         isSelected 
-                          ? 'border-rose-500 ring-4 ring-rose-500/30 shadow-rose-500/50' 
+                          ? 'border-rose-500 ring-4 ring-rose-500/40 shadow-rose-500/50' 
                           : 'border-slate-700 bg-slate-900'
                       }`}
                       style={{
                         backgroundColor: l.active ? '#0f172a' : '#334155',
-                        boxShadow: l.active ? `0 0 16px ${lightColor}88` : 'none'
+                        boxShadow: l.active ? `0 0 20px ${lightColor}99` : 'none'
                       }}
                     >
                       <Lightbulb 
-                        className="w-5 h-5 transition-colors"
+                        className="w-5 h-5 transition-colors pointer-events-none"
                         style={{ color: l.active ? lightColor : '#64748b' }}
                       />
+
+                      {/* Drag icon hint badge */}
+                      <div className="absolute -top-1 -right-1 w-4 h-4 rounded-full bg-rose-600 text-white flex items-center justify-center shadow-xs">
+                        <Move className="w-2.5 h-2.5" />
+                      </div>
                     </div>
-                    <div className="mt-1 px-2 py-0.5 rounded text-[10px] font-bold bg-slate-900/90 text-white border border-slate-700 whitespace-nowrap shadow-md">
-                      {l.name}
-                      <span className="ml-1 text-[9px] text-amber-400 font-mono">{l.power}%</span>
+
+                    <div className="mt-1 px-2 py-0.5 rounded text-[10px] font-bold bg-slate-900/90 text-white border border-slate-700 whitespace-nowrap shadow-md flex items-center gap-1 pointer-events-none">
+                      <span>{l.name}</span>
+                      <span className="text-[9px] text-amber-400 font-mono">
+                        {isDragging ? `${l.x}%, ${l.y}%` : `${l.power}%`}
+                      </span>
                     </div>
-                  </button>
+
+                    {isDragging && (
+                      <div className="mt-1 bg-rose-600 text-white text-[9px] font-mono font-bold px-2 py-0.5 rounded-full shadow-lg whitespace-nowrap pointer-events-none animate-pulse">
+                        Geser · Sudut: {l.angle}°
+                      </div>
+                    )}
+                  </div>
                 );
               })}
             </div>
 
             {/* Quick Canvas Action Bar */}
             <div className="flex items-center justify-between mt-4">
-              <button
-                onClick={handleAddLight}
-                className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold bg-rose-600 hover:bg-rose-700 text-white transition-colors"
-              >
-                <Plus className="w-3.5 h-3.5" />
-                <span>Tambah Lampu Studio</span>
-              </button>
+              <div className="flex items-center gap-2">
+                <button
+                  onClick={handleAddLight}
+                  className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold bg-rose-600 hover:bg-rose-700 text-white transition-colors"
+                >
+                  <Plus className="w-3.5 h-3.5" />
+                  <span>Tambah Lampu Studio</span>
+                </button>
+
+                <span className="text-[11px] text-slate-400 hidden sm:inline flex items-center gap-1">
+                  <Move className="w-3 h-3 text-rose-500 inline" /> Klik &amp; geser lampu untuk mengubah posisi secara bebas.
+                </span>
+              </div>
 
               <div className={`text-xs ${darkMode ? 'text-slate-400' : 'text-slate-500'}`}>
                 Total Daya Terpasang: <strong className={darkMode ? 'text-white' : 'text-slate-900'}>
