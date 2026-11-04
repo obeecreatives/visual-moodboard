@@ -201,6 +201,22 @@ export const INITIAL_SHOOT_CONCEPTS: PhotoShootConcept[] = [
       }
     ],
     colorGradingNotes: 'Tone hangat bernuansa madu alami (warm golden undertones), kontras sedang, blacks lifted sedikit untuk feel organik dan editorial.',
+    referenceImages: [
+      {
+        id: 'ref-1',
+        url: '/public/assets/aistudio/image_246715ec.png',
+        title: 'Acuan Pencahayaan Jar Kaca & Warna Madu Keemasan',
+        category: 'Lighting',
+        note: 'Backlight lembut menembus kaca amber, rim light tipis di bahu toples.'
+      },
+      {
+        id: 'ref-2',
+        url: '/public/assets/aistudio/image_246715ec.png',
+        title: 'Acuan Styling Honeycomb & Sendok Madu',
+        category: 'Props & Styling',
+        note: 'Tatakan kayu jati rustic dengan sendok kayu ulir dan tetesan madu segar.'
+      }
+    ],
     callSheetDate: '2026-11-12',
     callSheetLocation: 'obeecreatives Studio A (Daylight & Strobe Room)',
     photographerName: 'Lalu Mahendra (obeecreatives)',
@@ -253,6 +269,15 @@ export const INITIAL_SHOOT_CONCEPTS: PhotoShootConcept[] = [
       }
     ],
     colorGradingNotes: 'Warna berani, saturasi tinggi pada warna merah dan kuning, kontras tajam untuk menarik perhatian di timeline medsos.',
+    referenceImages: [
+      {
+        id: 'ref-k1',
+        url: '/public/assets/aistudio/image_246715ec.png',
+        title: 'Acuan Levitation & Splash Keripik',
+        category: 'Framing & Angle',
+        note: 'Pouch berdiri tegak di tengah, serpihan keripik melayang di udara.'
+      }
+    ],
     callSheetDate: '2026-11-18',
     callSheetLocation: 'obeecreatives Studio B (Color Stage)',
     photographerName: 'Aldrien Andriansyah',

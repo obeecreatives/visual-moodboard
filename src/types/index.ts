@@ -197,6 +197,14 @@ export interface PhotoShotItem {
   refImage?: string;
 }
 
+export interface PhotoReferenceImage {
+  id: string;
+  url: string;
+  title: string;
+  category: 'Lighting' | 'Framing & Angle' | 'Props & Styling' | 'Color Tone' | 'Other';
+  note?: string;
+}
+
 export interface PhotoShootConcept {
   id: string;
   briefId?: string; // Optional link to BriefProject
@@ -217,6 +225,7 @@ export interface PhotoShootConcept {
   };
   lights: StudioLight[];
   shots: PhotoShotItem[];
+  referenceImages: PhotoReferenceImage[];
   colorGradingNotes: string;
   callSheetDate: string;
   callSheetLocation: string;

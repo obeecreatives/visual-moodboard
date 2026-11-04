@@ -1,40 +1,34 @@
-import React, { useState } from 'react';
+import React, { useState, useRef } from 'react';
 import { 
   Camera, 
   Lightbulb, 
-  Sun, 
   Layers, 
   CheckCircle2, 
   Plus, 
   Trash2, 
-  Sliders, 
-  Download, 
-  Share2, 
-  Sparkles,
-  Info,
-  Maximize2,
-  Minimize2,
-  RotateCw,
-  Eye,
-  Film,
-  Instagram,
+  Printer, 
+  Check, 
+  Image as ImageIcon, 
+  Upload, 
+  Link as LinkIcon, 
+  Maximize2, 
+  X, 
+  Sparkles, 
   ShoppingBag,
-  Monitor,
-  Printer,
-  Palette,
-  Compass,
-  Check
+  ExternalLink,
+  Tag
 } from 'lucide-react';
 import { 
   PhotoShootConcept, 
   StudioLight, 
   PhotoShotItem, 
+  PhotoReferenceImage,
   LightType, 
   LightModifier, 
   PhotoAspect, 
   PhotoAngle, 
-  ShotStatus,
-  Role,
+  ShotStatus, 
+  Role, 
   BriefProject 
 } from '../../types';
 import { 
@@ -60,10 +54,37 @@ export const PhotoStudioView: React.FC<PhotoStudioViewProps> = ({
   darkMode,
   onTriggerSync
 }) => {
-  const [activeSubTab, setActiveSubTab] = useState<'lighting' | 'props' | 'shots' | 'callsheet'>('lighting');
+  const [activeSubTab, setActiveSubTab] = useState<'lighting' | 'props' | 'references' | 'shots' | 'callsheet'>('lighting');
   const [selectedLightId, setSelectedLightId] = useState<string>(currentConcept.lights[0]?.id || 'light-1');
   const [filterPlatform, setFilterPlatform] = useState<string>('all');
+  const [filterRefCategory, setFilterRefCategory] = useState<string>('all');
+  
+  // Modals & Lightbox states
+  const [lightboxImage, setLightboxImage] = useState<PhotoReferenceImage | null>(null);
+  const [isAddingRefModal, setIsAddingRefModal] = useState<boolean>(false);
   const [isAddingShot, setIsAddingShot] = useState<boolean>(false);
+  const [activeUploadShotId, setActiveUploadShotId] = useState<string | null>(null);
+
+  // Hidden file inputs
+  const generalFileInputRef = useRef<HTMLInputElement | null>(null);
+  const shotFileInputRef = useRef<HTMLInputElement | null>(null);
+
+  // New Reference form state
+  const [newRef, setNewRef] = useState<{
+    title: string;
+    url: string;
+    category: PhotoReferenceImage['category'];
+    note: string;
+    attachToShotId: string;
+  }>({
+    title: '',
+    url: '',
+    category: 'Lighting',
+    note: '',
+    attachToShotId: ''
+  });
+
+  // New Shot form state
   const [newShot, setNewShot] = useState<Partial<PhotoShotItem>>({
     title: '',
     format: '4:5',
@@ -71,11 +92,13 @@ export const PhotoStudioView: React.FC<PhotoStudioViewProps> = ({
     platform: 'Instagram Feed',
     propNotes: '',
     lightingNotes: '',
-    status: 'Planned'
+    status: 'Planned',
+    refImage: ''
   });
 
   const selectedLight = currentConcept.lights.find(l => l.id === selectedLightId) || currentConcept.lights[0];
   const activeSurface = SURFACE_PRESETS.find(s => s.key === currentConcept.surfaceKey) || SURFACE_PRESETS[0];
+  const conceptReferences = currentConcept.referenceImages || [];
 
   // Helper Kelvin to Color Tint
   const getKelvinColor = (kelvin: number) => {
@@ -167,6 +190,141 @@ export const PhotoStudioView: React.FC<PhotoStudioViewProps> = ({
     });
   };
 
+  // --- REFERENCE PHOTO HANDLERS ---
+  const handleGeneralFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    const reader = new FileReader();
+    reader.onload = (event) => {
+      const dataUrl = event.target?.result as string;
+      if (dataUrl) {
+        setNewRef(prev => ({
+          ...prev,
+          url: dataUrl,
+          title: prev.title || file.name.replace(/\.[^/.]+$/, '')
+        }));
+        setIsAddingRefModal(true);
+      }
+    };
+    reader.readAsDataURL(file);
+    e.target.value = '';
+  };
+
+  const handleShotFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file || !activeUploadShotId) return;
+
+    const reader = new FileReader();
+    reader.onload = (event) => {
+      const dataUrl = event.target?.result as string;
+      if (dataUrl) {
+        // Attach directly to the active shot
+        const updatedShots = currentConcept.shots.map(s => 
+          s.id === activeUploadShotId ? { ...s, refImage: dataUrl } : s
+        );
+        // Also save to reference gallery so it can be reused
+        const newRefObj: PhotoReferenceImage = {
+          id: `ref-${Date.now()}`,
+          url: dataUrl,
+          title: `Acuan Shot: ${currentConcept.shots.find(s => s.id === activeUploadShotId)?.title || 'Detail'}`,
+          category: 'Framing & Angle',
+          note: `Foto acuan yang diunggah langsung untuk shot #${activeUploadShotId}`
+        };
+        onUpdateConcept({
+          ...currentConcept,
+          shots: updatedShots,
+          referenceImages: [...conceptReferences, newRefObj],
+          updatedAt: new Date().toISOString()
+        });
+      }
+    };
+    reader.readAsDataURL(file);
+    e.target.value = '';
+    setActiveUploadShotId(null);
+  };
+
+  const handleSaveNewReference = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!newRef.url || !newRef.title) return;
+
+    const newRefObj: PhotoReferenceImage = {
+      id: `ref-${Date.now()}`,
+      url: newRef.url,
+      title: newRef.title,
+      category: newRef.category,
+      note: newRef.note
+    };
+
+    let updatedShots = currentConcept.shots;
+    if (newRef.attachToShotId) {
+      updatedShots = updatedShots.map(s => 
+        s.id === newRef.attachToShotId ? { ...s, refImage: newRef.url } : s
+      );
+    }
+
+    onUpdateConcept({
+      ...currentConcept,
+      referenceImages: [...conceptReferences, newRefObj],
+      shots: updatedShots,
+      updatedAt: new Date().toISOString()
+    });
+
+    setNewRef({
+      title: '',
+      url: '',
+      category: 'Lighting',
+      note: '',
+      attachToShotId: ''
+    });
+    setIsAddingRefModal(false);
+  };
+
+  const handleDeleteReference = (refId: string) => {
+    const refToDelete = conceptReferences.find(r => r.id === refId);
+    const filtered = conceptReferences.filter(r => r.id !== refId);
+    
+    // Also remove from any shots if that URL was attached
+    const updatedShots = currentConcept.shots.map(s => {
+      if (refToDelete && s.refImage === refToDelete.url) {
+        return { ...s, refImage: undefined };
+      }
+      return s;
+    });
+
+    onUpdateConcept({
+      ...currentConcept,
+      referenceImages: filtered,
+      shots: updatedShots,
+      updatedAt: new Date().toISOString()
+    });
+    if (lightboxImage?.id === refId) {
+      setLightboxImage(null);
+    }
+  };
+
+  const handleAttachRefToShot = (shotId: string, imageUrl: string) => {
+    const updatedShots = currentConcept.shots.map(s => 
+      s.id === shotId ? { ...s, refImage: imageUrl } : s
+    );
+    onUpdateConcept({
+      ...currentConcept,
+      shots: updatedShots,
+      updatedAt: new Date().toISOString()
+    });
+  };
+
+  const handleRemoveRefFromShot = (shotId: string) => {
+    const updatedShots = currentConcept.shots.map(s => 
+      s.id === shotId ? { ...s, refImage: undefined } : s
+    );
+    onUpdateConcept({
+      ...currentConcept,
+      shots: updatedShots,
+      updatedAt: new Date().toISOString()
+    });
+  };
+
   // Shot List Handlers
   const handleToggleShotStatus = (shotId: string) => {
     const statusCycle: ShotStatus[] = ['Planned', 'Tested', 'Approved', 'Completed'];
@@ -192,10 +350,11 @@ export const PhotoStudioView: React.FC<PhotoStudioViewProps> = ({
       title: newShot.title,
       format: (newShot.format as PhotoAspect) || '4:5',
       angle: (newShot.angle as PhotoAngle) || 'Hero 45°',
-      platform: newShot.platform as any || 'Instagram Feed',
+      platform: (newShot.platform as any) || 'Instagram Feed',
       propNotes: newShot.propNotes || '',
       lightingNotes: newShot.lightingNotes || '',
-      status: (newShot.status as ShotStatus) || 'Planned'
+      status: (newShot.status as ShotStatus) || 'Planned',
+      refImage: newShot.refImage || undefined
     };
     onUpdateConcept({
       ...currentConcept,
@@ -209,7 +368,8 @@ export const PhotoStudioView: React.FC<PhotoStudioViewProps> = ({
       platform: 'Instagram Feed',
       propNotes: '',
       lightingNotes: '',
-      status: 'Planned'
+      status: 'Planned',
+      refImage: ''
     });
     setIsAddingShot(false);
   };
@@ -226,12 +386,32 @@ export const PhotoStudioView: React.FC<PhotoStudioViewProps> = ({
     ? currentConcept.shots
     : currentConcept.shots.filter(s => s.platform.toLowerCase().includes(filterPlatform.toLowerCase()));
 
+  const filteredReferences = filterRefCategory === 'all'
+    ? conceptReferences
+    : conceptReferences.filter(r => r.category === filterRefCategory);
+
   const handlePrintCallSheet = () => {
     window.print();
   };
 
   return (
     <div className="space-y-6">
+      {/* Hidden File Inputs for Local Image Upload */}
+      <input
+        type="file"
+        ref={generalFileInputRef}
+        onChange={handleGeneralFileSelect}
+        accept="image/*"
+        className="hidden"
+      />
+      <input
+        type="file"
+        ref={shotFileInputRef}
+        onChange={handleShotFileSelect}
+        accept="image/*"
+        className="hidden"
+      />
+
       {/* Header Bar */}
       <div className={`p-6 rounded-2xl border transition-colors shadow-sm ${
         darkMode ? 'bg-slate-900 border-slate-800' : 'bg-white border-slate-200'
@@ -254,7 +434,7 @@ export const PhotoStudioView: React.FC<PhotoStudioViewProps> = ({
               {currentConcept.title}
             </h1>
             <p className={`text-sm mt-1 ${darkMode ? 'text-slate-400' : 'text-slate-600'}`}>
-              Studio tata cahaya interaktif, visual props matrix, dan shot list terintegrasi kampanye media sosial & katalog.
+              Studio tata cahaya interaktif, visual props matrix, galeri acuan foto referensi, dan shot deliverables.
             </p>
           </div>
 
@@ -318,7 +498,7 @@ export const PhotoStudioView: React.FC<PhotoStudioViewProps> = ({
             }`}
           >
             <Lightbulb className="w-4 h-4" />
-            <span>1. Studio Lighting Canvas</span>
+            <span>1. Studio Lighting</span>
             <span className="ml-1 px-1.5 py-0.2 rounded-full text-[10px] bg-black/20">
               {currentConcept.lights.length} Lampu
             </span>
@@ -335,9 +515,27 @@ export const PhotoStudioView: React.FC<PhotoStudioViewProps> = ({
             }`}
           >
             <Layers className="w-4 h-4" />
-            <span>2. Props & Surface Matrix</span>
+            <span>2. Props & Surface</span>
             <span className="ml-1 px-1.5 py-0.2 rounded-full text-[10px] bg-black/20">
               {currentConcept.selectedProps.length} Props
+            </span>
+          </button>
+
+          {/* NEW SUB-TAB: ACUAN & REFERENSI FOTO */}
+          <button
+            onClick={() => setActiveSubTab('references')}
+            className={`flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-semibold whitespace-nowrap transition-colors ${
+              activeSubTab === 'references'
+                ? 'bg-rose-600 text-white shadow-sm'
+                : darkMode 
+                  ? 'text-slate-400 hover:text-white hover:bg-slate-800' 
+                  : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100'
+            }`}
+          >
+            <ImageIcon className="w-4 h-4" />
+            <span>3. Acuan Foto Referensi</span>
+            <span className="ml-1 px-1.5 py-0.2 rounded-full text-[10px] bg-black/20">
+              {conceptReferences.length} Acuan
             </span>
           </button>
 
@@ -352,7 +550,7 @@ export const PhotoStudioView: React.FC<PhotoStudioViewProps> = ({
             }`}
           >
             <Camera className="w-4 h-4" />
-            <span>3. Shot List & Deliverables</span>
+            <span>4. Shot List & Deliverables</span>
             <span className="ml-1 px-1.5 py-0.2 rounded-full text-[10px] bg-black/20">
               {currentConcept.shots.length} Shots
             </span>
@@ -369,7 +567,7 @@ export const PhotoStudioView: React.FC<PhotoStudioViewProps> = ({
             }`}
           >
             <Printer className="w-4 h-4" />
-            <span>4. Production Call Sheet</span>
+            <span>5. Production Call Sheet</span>
           </button>
         </div>
       </div>
@@ -420,7 +618,7 @@ export const PhotoStudioView: React.FC<PhotoStudioViewProps> = ({
                 }}
               />
 
-              {/* Light Cones Rendering from all active lights */}
+              {/* Light Cones Rendering */}
               {currentConcept.lights.filter(l => l.active).map(l => {
                 const isSelected = l.id === selectedLightId;
                 const lightTint = getKelvinColor(l.kelvin);
@@ -435,7 +633,6 @@ export const PhotoStudioView: React.FC<PhotoStudioViewProps> = ({
                       transformOrigin: 'center center'
                     }}
                   >
-                    {/* Visual beam cone pointing toward subject (table at center 50%, 50%) */}
                     <div 
                       style={{
                         width: `${Math.max(120, l.power * 2.8)}px`,
@@ -485,7 +682,6 @@ export const PhotoStudioView: React.FC<PhotoStudioViewProps> = ({
                   <Camera className="w-3.5 h-3.5 text-rose-400" />
                   <span>Kamera Utama ({currentConcept.cameraSettings.lens.split(' ')[0]})</span>
                 </div>
-                {/* Camera View Angle Cone Guide */}
                 <div 
                   className="w-32 h-16 border-t border-l border-r border-dashed border-rose-500/30 rounded-t-full mt-1"
                 />
@@ -508,7 +704,6 @@ export const PhotoStudioView: React.FC<PhotoStudioViewProps> = ({
                       transform: 'translate(-50%, -50%)'
                     }}
                   >
-                    {/* Light Head Fixture */}
                     <div 
                       className={`w-10 h-10 rounded-full flex items-center justify-center shadow-xl border-2 transition-all ${
                         isSelected 
@@ -525,8 +720,6 @@ export const PhotoStudioView: React.FC<PhotoStudioViewProps> = ({
                         style={{ color: l.active ? lightColor : '#64748b' }}
                       />
                     </div>
-
-                    {/* Badge Label */}
                     <div className="mt-1 px-2 py-0.5 rounded text-[10px] font-bold bg-slate-900/90 text-white border border-slate-700 whitespace-nowrap shadow-md">
                       {l.name}
                       <span className="ml-1 text-[9px] text-amber-400 font-mono">{l.power}%</span>
@@ -538,15 +731,13 @@ export const PhotoStudioView: React.FC<PhotoStudioViewProps> = ({
 
             {/* Quick Canvas Action Bar */}
             <div className="flex items-center justify-between mt-4">
-              <div className="flex items-center gap-2">
-                <button
-                  onClick={handleAddLight}
-                  className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold bg-rose-600 hover:bg-rose-700 text-white transition-colors"
-                >
-                  <Plus className="w-3.5 h-3.5" />
-                  <span>Tambah Lampu Studio</span>
-                </button>
-              </div>
+              <button
+                onClick={handleAddLight}
+                className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold bg-rose-600 hover:bg-rose-700 text-white transition-colors"
+              >
+                <Plus className="w-3.5 h-3.5" />
+                <span>Tambah Lampu Studio</span>
+              </button>
 
               <div className={`text-xs ${darkMode ? 'text-slate-400' : 'text-slate-500'}`}>
                 Total Daya Terpasang: <strong className={darkMode ? 'text-white' : 'text-slate-900'}>
@@ -596,7 +787,6 @@ export const PhotoStudioView: React.FC<PhotoStudioViewProps> = ({
                   </div>
                 </div>
 
-                {/* Light Name & Type */}
                 <div className="space-y-3">
                   <div>
                     <label className={`block text-xs font-medium mb-1 ${darkMode ? 'text-slate-300' : 'text-slate-700'}`}>
@@ -635,7 +825,6 @@ export const PhotoStudioView: React.FC<PhotoStudioViewProps> = ({
                     </div>
                   </div>
 
-                  {/* Modifier Type */}
                   <div>
                     <label className={`block text-xs font-medium mb-1 ${darkMode ? 'text-slate-300' : 'text-slate-700'}`}>
                       Modifier / Softbox
@@ -660,7 +849,6 @@ export const PhotoStudioView: React.FC<PhotoStudioViewProps> = ({
 
                 {/* Sliders: Power, Kelvin, Angle, Position */}
                 <div className="space-y-4 pt-2 border-t border-slate-100 dark:border-slate-800">
-                  {/* Power Slider */}
                   <div>
                     <div className="flex justify-between text-xs mb-1">
                       <span className={darkMode ? 'text-slate-300' : 'text-slate-700'}>Intensitas Daya:</span>
@@ -676,7 +864,6 @@ export const PhotoStudioView: React.FC<PhotoStudioViewProps> = ({
                     />
                   </div>
 
-                  {/* Kelvin Temperature */}
                   <div>
                     <div className="flex justify-between text-xs mb-1">
                       <span className={darkMode ? 'text-slate-300' : 'text-slate-700'}>Color Temperature:</span>
@@ -698,7 +885,6 @@ export const PhotoStudioView: React.FC<PhotoStudioViewProps> = ({
                     </div>
                   </div>
 
-                  {/* Angle Rotation */}
                   <div>
                     <div className="flex justify-between text-xs mb-1">
                       <span className={darkMode ? 'text-slate-300' : 'text-slate-700'}>Sudut Arah Sorot:</span>
@@ -713,51 +899,6 @@ export const PhotoStudioView: React.FC<PhotoStudioViewProps> = ({
                       className="w-full accent-blue-500 cursor-pointer"
                     />
                   </div>
-
-                  {/* Position X / Y on floor */}
-                  <div className="grid grid-cols-2 gap-3 pt-2">
-                    <div>
-                      <div className="flex justify-between text-xs mb-1">
-                        <span className="text-slate-400">Posisi X:</span>
-                        <span className="font-mono text-xs">{selectedLight.x}%</span>
-                      </div>
-                      <input
-                        type="range"
-                        min="10"
-                        max="90"
-                        value={selectedLight.x}
-                        onChange={(e) => handleUpdateSelectedLight({ x: Number(e.target.value) })}
-                        className="w-full accent-slate-400 cursor-pointer"
-                      />
-                    </div>
-                    <div>
-                      <div className="flex justify-between text-xs mb-1">
-                        <span className="text-slate-400">Posisi Y:</span>
-                        <span className="font-mono text-xs">{selectedLight.y}%</span>
-                      </div>
-                      <input
-                        type="range"
-                        min="10"
-                        max="90"
-                        value={selectedLight.y}
-                        onChange={(e) => handleUpdateSelectedLight({ y: Number(e.target.value) })}
-                        className="w-full accent-slate-400 cursor-pointer"
-                      />
-                    </div>
-                  </div>
-                </div>
-
-                {/* Pro Tips Box */}
-                <div className={`p-3 rounded-xl border text-xs space-y-1 ${
-                  darkMode ? 'bg-slate-800/60 border-slate-700/80 text-slate-300' : 'bg-slate-50 border-slate-200 text-slate-600'
-                }`}>
-                  <div className="flex items-center gap-1.5 font-semibold text-rose-500">
-                    <Sparkles className="w-3.5 h-3.5" />
-                    <span>obeecreatives Lighting Rule:</span>
-                  </div>
-                  <p className="text-[11px] leading-relaxed">
-                    Untuk botol kaca / toples kemasan, gunakan <strong>Stripbox</strong> di sudut rim 45° belakang untuk menghasilkan highlight garis vertikal yang elegan tanpa bayangan kotor di depan label.
-                  </p>
                 </div>
               </>
             ) : (
@@ -772,7 +913,6 @@ export const PhotoStudioView: React.FC<PhotoStudioViewProps> = ({
       {/* SUB-TAB 2: PROPS & SURFACE MATRIX */}
       {activeSubTab === 'props' && (
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
-          {/* Surface & Background Selection */}
           <div className={`lg:col-span-6 p-6 rounded-2xl border shadow-sm space-y-5 ${
             darkMode ? 'bg-slate-900 border-slate-800' : 'bg-white border-slate-200'
           }`}>
@@ -857,7 +997,7 @@ export const PhotoStudioView: React.FC<PhotoStudioViewProps> = ({
                 </span>
               </div>
               <p className={`text-xs ${darkMode ? 'text-slate-400' : 'text-slate-500'}`}>
-                Centang aksesoris dan elemen styling yang wajib dibawa ke studio oleh tim stylist.
+                Centang aksesoris dan elemen styling yang wajib disiapkan tim stylist di set studio.
               </p>
             </div>
 
@@ -897,38 +1037,183 @@ export const PhotoStudioView: React.FC<PhotoStudioViewProps> = ({
                 </div>
               ))}
             </div>
-
-            {/* Custom Notes */}
-            <div className="pt-3 border-t border-slate-100 dark:border-slate-800">
-              <label className={`block text-xs font-medium mb-1 ${darkMode ? 'text-slate-300' : 'text-slate-700'}`}>
-                Catatan Color Grading & Styling Khusus:
-              </label>
-              <textarea
-                value={currentConcept.colorGradingNotes}
-                onChange={(e) => onUpdateConcept({
-                  ...currentConcept,
-                  colorGradingNotes: e.target.value,
-                  updatedAt: new Date().toISOString()
-                })}
-                rows={3}
-                placeholder="Misal: Tone hangat bernuansa madu, kurangi saturasi hijau daun sedikit agar produk kemasan tetap vokal..."
-                className={`w-full px-3 py-2 rounded-xl border text-xs focus:outline-none focus:ring-2 focus:ring-rose-500 ${
-                  darkMode ? 'bg-slate-800 border-slate-700 text-white' : 'bg-slate-50 border-slate-200 text-slate-900'
-                }`}
-              />
-            </div>
           </div>
         </div>
       )}
 
-      {/* SUB-TAB 3: SHOT LIST & DELIVERABLES */}
+      {/* SUB-TAB 3: ACUAN & REFERENSI FOTO (VISUAL MOODBOARD) */}
+      {activeSubTab === 'references' && (
+        <div className="space-y-6">
+          {/* Action Header */}
+          <div className={`p-4 rounded-2xl border flex flex-col sm:flex-row items-center justify-between gap-4 ${
+            darkMode ? 'bg-slate-900 border-slate-800' : 'bg-white border-slate-200'
+          }`}>
+            {/* Category Filter Pills */}
+            <div className="flex items-center gap-1.5 flex-wrap">
+              <span className={`text-xs font-medium mr-1 ${darkMode ? 'text-slate-400' : 'text-slate-500'}`}>
+                Kategori Acuan:
+              </span>
+              {[
+                { id: 'all', label: 'Semua Acuan' },
+                { id: 'Lighting', label: 'Tata Cahaya (Lighting)' },
+                { id: 'Framing & Angle', label: 'Sudut & Framing' },
+                { id: 'Props & Styling', label: 'Props & Styling' },
+                { id: 'Color Tone', label: 'Color Tone & Mood' }
+              ].map(cat => (
+                <button
+                  key={cat.id}
+                  onClick={() => setFilterRefCategory(cat.id)}
+                  className={`px-3 py-1 rounded-lg text-xs font-medium transition-colors ${
+                    filterRefCategory === cat.id
+                      ? 'bg-rose-600 text-white shadow-xs'
+                      : darkMode
+                        ? 'bg-slate-800 text-slate-400 hover:text-white'
+                        : 'bg-slate-100 text-slate-600 hover:text-slate-900'
+                  }`}
+                >
+                  {cat.label}
+                </button>
+              ))}
+            </div>
+
+            <div className="flex items-center gap-2">
+              {/* Upload from Local Storage Button */}
+              <button
+                onClick={() => generalFileInputRef.current?.click()}
+                className="flex items-center gap-1.5 px-3.5 py-2 rounded-xl text-xs font-semibold bg-slate-800 hover:bg-slate-700 text-white transition-colors border border-slate-700"
+                title="Pilih file foto dari laptop/komputer Anda"
+              >
+                <Upload className="w-3.5 h-3.5 text-rose-400" />
+                <span>Upload dari Perangkat</span>
+              </button>
+
+              {/* Add by Link or Manual Modal Button */}
+              <button
+                onClick={() => setIsAddingRefModal(true)}
+                className="flex items-center gap-1.5 px-4 py-2 rounded-xl text-xs font-semibold bg-rose-600 hover:bg-rose-700 text-white transition-colors shadow-sm"
+              >
+                <Plus className="w-4 h-4" />
+                <span>Input URL Acuan</span>
+              </button>
+            </div>
+          </div>
+
+          {/* Reference Photos Grid */}
+          {filteredReferences.length === 0 ? (
+            <div className={`p-12 text-center rounded-2xl border ${
+              darkMode ? 'bg-slate-900/50 border-slate-800' : 'bg-slate-50 border-slate-200'
+            }`}>
+              <div className="w-12 h-12 rounded-full bg-rose-500/10 text-rose-400 mx-auto flex items-center justify-center mb-3">
+                <ImageIcon className="w-6 h-6" />
+              </div>
+              <h4 className={`text-sm font-bold ${darkMode ? 'text-white' : 'text-slate-900'}`}>
+                Belum ada acuan foto referensi
+              </h4>
+              <p className={`text-xs mt-1 max-w-sm mx-auto ${darkMode ? 'text-slate-400' : 'text-slate-500'}`}>
+                Unggah contoh foto acuan dari perangkat Anda atau masukkan tautan URL foto referensi untuk memandu fotografer di studio.
+              </p>
+              <button
+                onClick={() => generalFileInputRef.current?.click()}
+                className="mt-4 inline-flex items-center gap-1.5 px-4 py-2 rounded-xl text-xs font-semibold bg-rose-600 text-white hover:bg-rose-700"
+              >
+                <Upload className="w-3.5 h-3.5" />
+                <span>Pilih Foto dari Perangkat</span>
+              </button>
+            </div>
+          ) : (
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-5">
+              {filteredReferences.map((ref) => {
+                return (
+                  <div
+                    key={ref.id}
+                    className={`rounded-2xl border overflow-hidden flex flex-col justify-between group transition-all hover:shadow-lg ${
+                      darkMode ? 'bg-slate-900 border-slate-800' : 'bg-white border-slate-200'
+                    }`}
+                  >
+                    <div>
+                      {/* Photo Thumbnail Container */}
+                      <div className="relative aspect-[4/3] bg-slate-950 overflow-hidden cursor-pointer" onClick={() => setLightboxImage(ref)}>
+                        <img 
+                          src={ref.url} 
+                          alt={ref.title}
+                          className="w-full h-full object-cover transition-transform duration-300 group-hover:scale-105"
+                          referrerPolicy="no-referrer"
+                        />
+                        <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center gap-2">
+                          <button
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              setLightboxImage(ref);
+                            }}
+                            className="p-2 rounded-full bg-white/20 hover:bg-white/40 text-white backdrop-blur-xs"
+                            title="Perbesar Foto"
+                          >
+                            <Maximize2 className="w-4 h-4" />
+                          </button>
+                        </div>
+                        <span className="absolute top-2 left-2 px-2 py-0.5 rounded text-[10px] font-bold bg-black/70 text-white backdrop-blur-xs">
+                          {ref.category}
+                        </span>
+                      </div>
+
+                      {/* Content Info */}
+                      <div className="p-4">
+                        <h4 className={`text-xs font-bold line-clamp-1 ${darkMode ? 'text-white' : 'text-slate-900'}`}>
+                          {ref.title}
+                        </h4>
+                        {ref.note && (
+                          <p className={`text-[11px] mt-1 leading-relaxed line-clamp-2 ${darkMode ? 'text-slate-400' : 'text-slate-500'}`}>
+                            {ref.note}
+                          </p>
+                        )}
+                      </div>
+                    </div>
+
+                    {/* Footer Actions */}
+                    <div className="p-3 pt-0 flex items-center justify-between border-t border-slate-100 dark:border-slate-800/80">
+                      {/* Quick Attach to Shot Dropdown */}
+                      <select
+                        onChange={(e) => {
+                          if (e.target.value) {
+                            handleAttachRefToShot(e.target.value, ref.url);
+                          }
+                        }}
+                        defaultValue=""
+                        className={`text-[10px] font-medium px-2 py-1 rounded border max-w-[170px] truncate ${
+                          darkMode ? 'bg-slate-800 border-slate-700 text-slate-300' : 'bg-slate-100 border-slate-200 text-slate-700'
+                        }`}
+                      >
+                        <option value="">Tautkan ke Shot...</option>
+                        {currentConcept.shots.map((s, idx) => (
+                          <option key={s.id} value={s.id}>
+                            #{idx + 1} {s.title}
+                          </option>
+                        ))}
+                      </select>
+
+                      <button
+                        onClick={() => handleDeleteReference(ref.id)}
+                        className="p-1 rounded text-slate-400 hover:text-red-400 hover:bg-red-500/10 transition-colors"
+                        title="Hapus Acuan Foto"
+                      >
+                        <Trash2 className="w-3.5 h-3.5" />
+                      </button>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* SUB-TAB 4: SHOT LIST & DELIVERABLES */}
       {activeSubTab === 'shots' && (
         <div className="space-y-6">
           {/* Controls Bar */}
           <div className={`p-4 rounded-2xl border flex flex-col sm:flex-row items-center justify-between gap-4 ${
             darkMode ? 'bg-slate-900 border-slate-800' : 'bg-white border-slate-200'
           }`}>
-            {/* Filter by Platform */}
             <div className="flex items-center gap-1.5 flex-wrap">
               <span className={`text-xs font-medium mr-1 ${darkMode ? 'text-slate-400' : 'text-slate-500'}`}>
                 Filter Platform:
@@ -965,7 +1250,7 @@ export const PhotoStudioView: React.FC<PhotoStudioViewProps> = ({
             </button>
           </div>
 
-          {/* Modal / Form Add Shot */}
+          {/* Form Add Shot */}
           {isAddingShot && (
             <div className={`p-6 rounded-2xl border border-rose-500/40 shadow-xl ${
               darkMode ? 'bg-slate-850 border-rose-500/40' : 'bg-rose-50/50 border-rose-200'
@@ -998,7 +1283,7 @@ export const PhotoStudioView: React.FC<PhotoStudioViewProps> = ({
                     }`}
                   >
                     <option value="4:5">4:5 (Portrait - Instagram Feed)</option>
-                    <option value="1:1">1:1 (Square - Feed / Tokopedia / Shopee)</option>
+                    <option value="1:1">1:1 (Square - Feed / E-Commerce)</option>
                     <option value="9:16">9:16 (Vertical - Reels / TikTok / Story)</option>
                     <option value="16:9">16:9 (Landscape - Web Banner / Billboard)</option>
                   </select>
@@ -1040,18 +1325,18 @@ export const PhotoStudioView: React.FC<PhotoStudioViewProps> = ({
                 </div>
 
                 <div>
-                  <label className="block text-xs font-medium mb-1">Status Awal:</label>
+                  <label className="block text-xs font-medium mb-1">Pilih Foto Acuan Referensi (Opsional):</label>
                   <select
-                    value={newShot.status}
-                    onChange={(e) => setNewShot({ ...newShot, status: e.target.value as ShotStatus })}
+                    value={newShot.refImage || ''}
+                    onChange={(e) => setNewShot({ ...newShot, refImage: e.target.value })}
                     className={`w-full px-3 py-2 rounded-lg border text-xs ${
                       darkMode ? 'bg-slate-800 border-slate-700 text-white' : 'bg-white border-slate-300'
                     }`}
                   >
-                    <option value="Planned">Planned (Direncanakan)</option>
-                    <option value="Tested">Tested (Uji Coba Lighting)</option>
-                    <option value="Approved">Approved (Disetujui Klien)</option>
-                    <option value="Completed">Completed (Selesai Foto)</option>
+                    <option value="">(Belum ada foto acuan)</option>
+                    {conceptReferences.map(r => (
+                      <option key={r.id} value={r.url}>{r.title} ({r.category})</option>
+                    ))}
                   </select>
                 </div>
 
@@ -1087,7 +1372,7 @@ export const PhotoStudioView: React.FC<PhotoStudioViewProps> = ({
             </div>
           )}
 
-          {/* Shot Cards Grid */}
+          {/* Shot Cards Grid with Reference Image Attachments */}
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
             {filteredShots.map((shot, index) => {
               const statusColors: Record<ShotStatus, string> = {
@@ -1105,7 +1390,7 @@ export const PhotoStudioView: React.FC<PhotoStudioViewProps> = ({
                   }`}
                 >
                   <div>
-                    {/* Top Row: Number, Aspect Ratio, Platform Icon */}
+                    {/* Top Row: Number, Aspect Ratio, Platform */}
                     <div className="flex items-center justify-between mb-3">
                       <div className="flex items-center gap-2">
                         <span className="font-mono text-xs font-bold text-rose-500">
@@ -1129,21 +1414,60 @@ export const PhotoStudioView: React.FC<PhotoStudioViewProps> = ({
                       </button>
                     </div>
 
-                    {/* Aspect Frame Visual Wireframe */}
-                    <div className="w-full h-32 rounded-xl bg-slate-950 border border-slate-800 flex items-center justify-center p-2 mb-3 relative overflow-hidden group">
-                      {/* Aspect Frame Simulator */}
-                      <div 
-                        className="border-2 border-dashed border-rose-500/60 rounded-md flex flex-col items-center justify-center p-2 text-center transition-transform group-hover:scale-105"
-                        style={{
-                          aspectRatio: shot.format === '4:5' ? '4/5' : shot.format === '9:16' ? '9/16' : shot.format === '16:9' ? '16/9' : '1/1',
-                          height: '90%'
-                        }}
-                      >
-                        <Camera className="w-4 h-4 text-rose-400 mb-1" />
-                        <span className="text-[9px] font-mono font-bold text-white uppercase truncate max-w-[80px]">
-                          {shot.platform.split(' ')[0]}
-                        </span>
-                      </div>
+                    {/* Reference Photo Box or Aspect Simulator */}
+                    <div className="w-full h-36 rounded-xl bg-slate-950 border border-slate-800 flex items-center justify-center p-2 mb-3 relative overflow-hidden group">
+                      {shot.refImage ? (
+                        <>
+                          <img 
+                            src={shot.refImage} 
+                            alt={shot.title}
+                            className="w-full h-full object-cover rounded-lg cursor-pointer"
+                            onClick={() => setLightboxImage({
+                              id: `shot-ref-${shot.id}`,
+                              url: shot.refImage!,
+                              title: `Acuan: ${shot.title}`,
+                              category: 'Framing & Angle'
+                            })}
+                          />
+                          <div className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center gap-2">
+                            <button
+                              onClick={() => setLightboxImage({
+                                id: `shot-ref-${shot.id}`,
+                                url: shot.refImage!,
+                                title: `Acuan: ${shot.title}`,
+                                category: 'Framing & Angle'
+                              })}
+                              className="p-1.5 rounded-full bg-white/20 text-white hover:bg-white/40"
+                              title="Perbesar Acuan"
+                            >
+                              <Maximize2 className="w-4 h-4" />
+                            </button>
+                            <button
+                              onClick={() => handleRemoveRefFromShot(shot.id)}
+                              className="p-1.5 rounded-full bg-red-600/60 text-white hover:bg-red-600"
+                              title="Hapus Lampiran Foto"
+                            >
+                              <Trash2 className="w-4 h-4" />
+                            </button>
+                          </div>
+                          <span className="absolute bottom-2 left-2 px-2 py-0.5 rounded text-[9px] font-bold bg-black/70 text-emerald-400 border border-emerald-500/30 flex items-center gap-1 backdrop-blur-xs">
+                            <Check className="w-2.5 h-2.5" /> Foto Acuan Terpasang
+                          </span>
+                        </>
+                      ) : (
+                        <div 
+                          className="border-2 border-dashed border-slate-700 hover:border-rose-500/60 rounded-md flex flex-col items-center justify-center p-2 text-center transition-colors cursor-pointer w-full h-full"
+                          onClick={() => {
+                            setActiveUploadShotId(shot.id);
+                            shotFileInputRef.current?.click();
+                          }}
+                        >
+                          <Upload className="w-4 h-4 text-slate-400 group-hover:text-rose-400 mb-1" />
+                          <span className="text-[10px] text-slate-400 group-hover:text-slate-200">
+                            + Lampirkan Foto Acuan
+                          </span>
+                        </div>
+                      )}
                     </div>
 
                     <h4 className={`text-sm font-bold tracking-tight mb-1 ${darkMode ? 'text-white' : 'text-slate-900'}`}>
@@ -1157,9 +1481,20 @@ export const PhotoStudioView: React.FC<PhotoStudioViewProps> = ({
                     )}
                   </div>
 
-                  {/* Bottom Action: Status Cycle Button */}
+                  {/* Bottom Controls */}
                   <div className="pt-4 mt-3 border-t border-slate-100 dark:border-slate-800 flex items-center justify-between">
-                    <span className="text-[11px] text-slate-400">Status Foto:</span>
+                    {/* Quick Button to Upload/Change Reference */}
+                    <button
+                      onClick={() => {
+                        setActiveUploadShotId(shot.id);
+                        shotFileInputRef.current?.click();
+                      }}
+                      className="text-[10px] text-rose-500 hover:underline flex items-center gap-1"
+                    >
+                      <Upload className="w-3 h-3" />
+                      <span>{shot.refImage ? 'Ganti Foto' : 'Upload Acuan'}</span>
+                    </button>
+
                     <button
                       onClick={() => handleToggleShotStatus(shot.id)}
                       className={`px-2.5 py-1 rounded-full text-xs font-semibold border flex items-center gap-1.5 transition-all hover:scale-105 ${
@@ -1177,7 +1512,7 @@ export const PhotoStudioView: React.FC<PhotoStudioViewProps> = ({
         </div>
       )}
 
-      {/* SUB-TAB 4: PRODUCTION CALL SHEET (READY TO PRINT) */}
+      {/* SUB-TAB 5: PRODUCTION CALL SHEET (READY TO PRINT) */}
       {activeSubTab === 'callsheet' && (
         <div className={`p-8 rounded-2xl border shadow-sm print:p-0 print:border-none ${
           darkMode ? 'bg-slate-900 border-slate-800' : 'bg-white border-slate-200'
@@ -1231,33 +1566,27 @@ export const PhotoStudioView: React.FC<PhotoStudioViewProps> = ({
             </div>
           </div>
 
-          {/* Camera & Lighting Specs Strip */}
-          <div className="py-6 border-b border-slate-200 dark:border-slate-800 grid grid-cols-1 md:grid-cols-2 gap-6 text-xs">
-            <div>
-              <h4 className="font-bold text-rose-500 uppercase tracking-wider mb-2">
-                Camera & Lens Technical Invariants:
+          {/* Visual Mood & Photo Reference Strip on Call Sheet */}
+          {conceptReferences.length > 0 && (
+            <div className="py-6 border-b border-slate-200 dark:border-slate-800">
+              <h4 className="font-bold text-rose-500 uppercase tracking-wider text-xs mb-3">
+                Acuan Visual & Benchmark Foto Pemotretan:
               </h4>
-              <ul className="space-y-1 text-slate-300 font-mono">
-                <li>• Lensa Rekomendasi: <strong>{currentConcept.cameraSettings.lens}</strong></li>
-                <li>• Shutter Speed: <strong>{currentConcept.cameraSettings.shutter}</strong></li>
-                <li>• Aperture Target: <strong>{currentConcept.cameraSettings.aperture}</strong></li>
-                <li>• ISO Dasar: <strong>{currentConcept.cameraSettings.iso}</strong></li>
-              </ul>
+              <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+                {conceptReferences.slice(0, 4).map((ref) => (
+                  <div key={ref.id} className="rounded-xl border border-slate-700 overflow-hidden bg-slate-950">
+                    <img src={ref.url} alt={ref.title} className="w-full h-24 object-cover" />
+                    <div className="p-2 text-[10px]">
+                      <strong className="block truncate text-white">{ref.title}</strong>
+                      <span className="text-slate-400">{ref.category}</span>
+                    </div>
+                  </div>
+                ))}
+              </div>
             </div>
+          )}
 
-            <div>
-              <h4 className="font-bold text-rose-500 uppercase tracking-wider mb-2">
-                Setup Tata Cahaya & Permukaan Alas:
-              </h4>
-              <ul className="space-y-1 text-slate-300">
-                <li>• Alas Utama: <strong>{activeSurface.name}</strong> ({activeSurface.category})</li>
-                <li>• Lampu Aktif: <strong>{currentConcept.lights.filter(l => l.active).length} Unit</strong> ({currentConcept.lights.map(l => `${l.name} (${l.modifier})`).join(', ')})</li>
-                <li>• Tone Karakter: <strong>{currentConcept.themeMood}</strong></li>
-              </ul>
-            </div>
-          </div>
-
-          {/* Shot Deliverables Table */}
+          {/* Deliverables Table with Attached Reference Thumbnails */}
           <div className="pt-6">
             <h4 className="text-xs font-bold text-rose-500 uppercase tracking-wider mb-3">
               Daftar Deliverables ({currentConcept.shots.length} Shot Terjadwal):
@@ -1267,6 +1596,7 @@ export const PhotoStudioView: React.FC<PhotoStudioViewProps> = ({
                 <thead>
                   <tr className={`border-b ${darkMode ? 'border-slate-800 text-slate-400' : 'border-slate-200 text-slate-600'}`}>
                     <th className="py-2.5 px-3 font-semibold">No</th>
+                    <th className="py-2.5 px-3 font-semibold">Acuan Foto</th>
                     <th className="py-2.5 px-3 font-semibold">Deskripsi Shot</th>
                     <th className="py-2.5 px-3 font-semibold">Format</th>
                     <th className="py-2.5 px-3 font-semibold">Sudut Kamera</th>
@@ -1279,6 +1609,23 @@ export const PhotoStudioView: React.FC<PhotoStudioViewProps> = ({
                   {currentConcept.shots.map((shot, idx) => (
                     <tr key={shot.id} className={darkMode ? 'text-slate-300 hover:bg-slate-800/30' : 'text-slate-800 hover:bg-slate-50'}>
                       <td className="py-2.5 px-3 font-mono font-bold">{idx + 1}</td>
+                      <td className="py-2.5 px-3">
+                        {shot.refImage ? (
+                          <img 
+                            src={shot.refImage} 
+                            alt={shot.title} 
+                            className="w-12 h-12 object-cover rounded-lg border border-slate-700 shadow-xs cursor-pointer"
+                            onClick={() => setLightboxImage({
+                              id: `cs-${shot.id}`,
+                              url: shot.refImage!,
+                              title: shot.title,
+                              category: 'Framing & Angle'
+                            })}
+                          />
+                        ) : (
+                          <span className="text-[10px] text-slate-500">-</span>
+                        )}
+                      </td>
                       <td className="py-2.5 px-3 font-medium">{shot.title}</td>
                       <td className="py-2.5 px-3 font-mono">{shot.format}</td>
                       <td className="py-2.5 px-3">{shot.angle}</td>
@@ -1293,6 +1640,184 @@ export const PhotoStudioView: React.FC<PhotoStudioViewProps> = ({
                   ))}
                 </tbody>
               </table>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* MODAL: INPUT / TAMBAH ACUAN FOTO */}
+      {isAddingRefModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/70 backdrop-blur-xs">
+          <div className={`w-full max-w-lg rounded-2xl border p-6 shadow-2xl relative ${
+            darkMode ? 'bg-slate-900 border-slate-800 text-white' : 'bg-white border-slate-200 text-slate-900'
+          }`}>
+            <button
+              onClick={() => setIsAddingRefModal(false)}
+              className="absolute top-4 right-4 text-slate-400 hover:text-white"
+            >
+              <X className="w-5 h-5" />
+            </button>
+
+            <h3 className="text-base font-bold mb-1">
+              Tambah Foto Acuan Referensi Pemotretan
+            </h3>
+            <p className="text-xs text-slate-400 mb-4">
+              Unggah file foto langsung atau tempelkan URL gambar acuan untuk panduan fotografer & stylist.
+            </p>
+
+            <form onSubmit={handleSaveNewReference} className="space-y-4">
+              <div>
+                <label className="block text-xs font-medium mb-1">Judul / Deskripsi Singkat Acuan:</label>
+                <input
+                  type="text"
+                  required
+                  placeholder="Misal: Acuan Lighting Honey Jar atau Acuan Flatlay Botanicals"
+                  value={newRef.title}
+                  onChange={(e) => setNewRef({ ...newRef, title: e.target.value })}
+                  className={`w-full px-3 py-2 rounded-lg border text-xs ${
+                    darkMode ? 'bg-slate-800 border-slate-700 text-white' : 'bg-slate-50 border-slate-300 text-slate-900'
+                  }`}
+                />
+              </div>
+
+              <div>
+                <label className="block text-xs font-medium mb-1">Sumber Gambar (File Upload atau URL):</label>
+                <div className="flex gap-2">
+                  <input
+                    type="text"
+                    required
+                    placeholder="https://... atau hasil upload lokal"
+                    value={newRef.url}
+                    onChange={(e) => setNewRef({ ...newRef, url: e.target.value })}
+                    className={`flex-1 px-3 py-2 rounded-lg border text-xs font-mono truncate ${
+                      darkMode ? 'bg-slate-800 border-slate-700 text-white' : 'bg-slate-50 border-slate-300 text-slate-900'
+                    }`}
+                  />
+                  <button
+                    type="button"
+                    onClick={() => generalFileInputRef.current?.click()}
+                    className="px-3 py-2 rounded-lg text-xs font-semibold bg-slate-800 hover:bg-slate-700 text-white border border-slate-700 flex items-center gap-1.5"
+                  >
+                    <Upload className="w-3.5 h-3.5" />
+                    <span>Browse File</span>
+                  </button>
+                </div>
+              </div>
+
+              {/* Live Preview if URL exists */}
+              {newRef.url && (
+                <div className="w-full h-36 rounded-xl border border-slate-700 overflow-hidden bg-slate-950 flex items-center justify-center relative">
+                  <img src={newRef.url} alt="Preview" className="w-full h-full object-contain" />
+                  <span className="absolute bottom-2 right-2 text-[10px] bg-black/70 px-2 py-0.5 rounded text-white">
+                    Preview Acuan
+                  </span>
+                </div>
+              )}
+
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="block text-xs font-medium mb-1">Kategori Acuan:</label>
+                  <select
+                    value={newRef.category}
+                    onChange={(e) => setNewRef({ ...newRef, category: e.target.value as any })}
+                    className={`w-full px-3 py-2 rounded-lg border text-xs ${
+                      darkMode ? 'bg-slate-800 border-slate-700 text-white' : 'bg-slate-50 border-slate-300 text-slate-900'
+                    }`}
+                  >
+                    <option value="Lighting">Tata Cahaya (Lighting)</option>
+                    <option value="Framing & Angle">Sudut & Framing</option>
+                    <option value="Props & Styling">Props & Styling</option>
+                    <option value="Color Tone">Color Tone & Mood</option>
+                    <option value="Other">Lainnya</option>
+                  </select>
+                </div>
+
+                <div>
+                  <label className="block text-xs font-medium mb-1">Langsung Tautkan ke Shot:</label>
+                  <select
+                    value={newRef.attachToShotId}
+                    onChange={(e) => setNewRef({ ...newRef, attachToShotId: e.target.value })}
+                    className={`w-full px-3 py-2 rounded-lg border text-xs ${
+                      darkMode ? 'bg-slate-800 border-slate-700 text-white' : 'bg-slate-50 border-slate-300 text-slate-900'
+                    }`}
+                  >
+                    <option value="">(Simpan di Galeri Umum)</option>
+                    {currentConcept.shots.map((s, idx) => (
+                      <option key={s.id} value={s.id}>
+                        Shot #{idx + 1}: {s.title}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+              </div>
+
+              <div>
+                <label className="block text-xs font-medium mb-1">Catatan Khusus untuk Tim Studio:</label>
+                <textarea
+                  rows={2}
+                  placeholder="Misal: Perhatikan highlight rim di leher botol kaca, gunakan diffuser di kiri..."
+                  value={newRef.note}
+                  onChange={(e) => setNewRef({ ...newRef, note: e.target.value })}
+                  className={`w-full px-3 py-2 rounded-lg border text-xs ${
+                    darkMode ? 'bg-slate-800 border-slate-700 text-white' : 'bg-slate-50 border-slate-300 text-slate-900'
+                  }`}
+                />
+              </div>
+
+              <div className="flex justify-end gap-2 pt-2">
+                <button
+                  type="button"
+                  onClick={() => setIsAddingRefModal(false)}
+                  className="px-4 py-2 rounded-lg text-xs font-medium text-slate-400 hover:text-white"
+                >
+                  Batal
+                </button>
+                <button
+                  type="submit"
+                  className="px-5 py-2 rounded-lg text-xs font-semibold bg-rose-600 hover:bg-rose-700 text-white"
+                >
+                  Simpan Acuan Foto
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* FULLSCREEN LIGHTBOX MODAL */}
+      {lightboxImage && (
+        <div 
+          className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/90 backdrop-blur-md"
+          onClick={() => setLightboxImage(null)}
+        >
+          <div 
+            className="max-w-4xl w-full max-h-[90vh] flex flex-col items-center relative"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <button
+              onClick={() => setLightboxImage(null)}
+              className="absolute -top-10 right-0 text-white/80 hover:text-white p-1"
+            >
+              <X className="w-6 h-6" />
+            </button>
+            <div className="rounded-2xl overflow-hidden border border-slate-800 bg-black max-h-[75vh] flex items-center justify-center shadow-2xl">
+              <img 
+                src={lightboxImage.url} 
+                alt={lightboxImage.title} 
+                className="max-h-[75vh] w-auto object-contain"
+              />
+            </div>
+            <div className="w-full mt-3 flex items-center justify-between text-white text-xs px-2">
+              <div>
+                <strong className="text-sm font-bold block">{lightboxImage.title}</strong>
+                <span className="text-slate-400">{lightboxImage.category} {lightboxImage.note && `· ${lightboxImage.note}`}</span>
+              </div>
+              <button
+                onClick={() => setLightboxImage(null)}
+                className="px-4 py-1.5 rounded-lg bg-white/20 hover:bg-white/30 text-white text-xs font-medium"
+              >
+                Tutup Preview
+              </button>
             </div>
           </div>
         </div>
