@@ -4,12 +4,14 @@ import {
   UserProfile, 
   ActiveTab, 
   Role, 
-  BriefStatus 
+  BriefStatus,
+  PhotoShootConcept 
 } from './types';
 import { 
   INITIAL_BRIEFS, 
   INITIAL_USERS 
 } from './data/presets';
+import { INITIAL_SHOOT_CONCEPTS } from './data/photographyPresets';
 import { 
   STORAGE_KEY_GAS_URL, 
   STORAGE_KEY_BRIEFS, 
@@ -29,6 +31,7 @@ import { BriefView } from './components/views/BriefView';
 import { MoodboardView } from './components/views/MoodboardView';
 import { MockupView } from './components/views/MockupView';
 import { SceneView } from './components/views/SceneView';
+import { PhotoStudioView } from './components/views/PhotoStudioView';
 import { ClientReviewView } from './components/views/ClientReviewView';
 import { GasCenterModal } from './components/modals/GasCenterModal';
 import { UserManagementModal } from './components/modals/UserManagementModal';
@@ -40,7 +43,8 @@ import {
   Box, 
   Layers, 
   CheckSquare, 
-  Check 
+  Check,
+  Camera 
 } from 'lucide-react';
 
 export default function App() {
@@ -113,6 +117,25 @@ export default function App() {
       return saved && saved.trim() ? saved : DEFAULT_GAS_URL;
     } catch {
       return DEFAULT_GAS_URL;
+    }
+  });
+
+  // Photography concepts state
+  const [shootConcepts, setShootConcepts] = useState<PhotoShootConcept[]>(() => {
+    try {
+      const saved = localStorage.getItem('obee_shoot_concepts');
+      return saved ? JSON.parse(saved) : INITIAL_SHOOT_CONCEPTS;
+    } catch {
+      return INITIAL_SHOOT_CONCEPTS;
+    }
+  });
+
+  const [activeShootConceptId, setActiveShootConceptId] = useState<string>(() => {
+    try {
+      const saved = localStorage.getItem('obee_active_shoot_id');
+      return saved || shootConcepts[0]?.id || 'shoot-dawana-01';
+    } catch {
+      return 'shoot-dawana-01';
     }
   });
 
@@ -224,6 +247,28 @@ export default function App() {
       return b;
     }));
   }, [activeBriefId]);
+
+  // Persist shoot concepts
+  useEffect(() => {
+    try {
+      localStorage.setItem('obee_shoot_concepts', JSON.stringify(shootConcepts));
+    } catch {}
+  }, [shootConcepts]);
+
+  useEffect(() => {
+    try {
+      localStorage.setItem('obee_active_shoot_id', activeShootConceptId);
+    } catch {}
+  }, [activeShootConceptId]);
+
+  const activeShootConcept = useMemo(() => {
+    return shootConcepts.find(s => s.id === activeShootConceptId) || shootConcepts[0] || null;
+  }, [shootConcepts, activeShootConceptId]);
+
+  const handleUpdateActiveShootConcept = useCallback((updated: PhotoShootConcept) => {
+    setShootConcepts(prev => prev.map(sc => sc.id === updated.id ? updated : sc));
+    showToast('Konsep photo studio diperbarui!');
+  }, [showToast]);
 
   const handleCreateBrief = useCallback((newBriefData: Partial<BriefProject>) => {
     const year = new Date().getFullYear();
@@ -509,6 +554,17 @@ export default function App() {
             />
           )}
 
+          {activeTab === 'photo-studio' && activeShootConcept && (
+            <PhotoStudioView
+              currentConcept={activeShootConcept}
+              onUpdateConcept={handleUpdateActiveShootConcept}
+              availableBriefs={briefs}
+              userRole={activeUser.role}
+              darkMode={theme === 'dark'}
+              onTriggerSync={handleManualSync}
+            />
+          )}
+
           {activeTab === 'client-review' && activeBrief && (
             <ClientReviewView
               brief={activeBrief}
@@ -554,11 +610,11 @@ export default function App() {
           <span>Mockup</span>
         </button>
         <button
-          onClick={() => setActiveTab('scene')}
-          className={`flex flex-col items-center gap-1 text-[10px] ${activeTab === 'scene' ? 'text-red-500 font-bold' : ''}`}
+          onClick={() => setActiveTab('photo-studio')}
+          className={`flex flex-col items-center gap-1 text-[10px] ${activeTab === 'photo-studio' ? 'text-red-500 font-bold' : ''}`}
         >
-          <Layers size={18} />
-          <span>Set</span>
+          <Camera size={18} />
+          <span>Photo</span>
         </button>
         <button
           onClick={() => setActiveTab('client-review')}

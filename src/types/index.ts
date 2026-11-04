@@ -162,4 +162,65 @@ export type ActiveTab =
   | 'mood'
   | 'mockup'
   | 'scene'
+  | 'photo-studio'
   | 'client-review';
+
+export type LightType = 'key' | 'fill' | 'rim' | 'back' | 'hair' | 'bounce';
+export type LightModifier = 'Softbox Octa' | 'Beauty Dish' | 'Hard Reflector' | 'Snoot' | 'Scrim Diffuser' | 'Stripbox' | 'White Foamcore';
+
+export interface StudioLight {
+  id: string;
+  name: string;
+  type: LightType;
+  x: number; // 0 - 100 percentage inside studio floor
+  y: number; // 0 - 100 percentage inside studio floor
+  angle: number; // 0 - 360 degrees
+  power: number; // 1 - 100%
+  kelvin: number; // 3200K - 6500K
+  modifier: LightModifier;
+  active: boolean;
+}
+
+export type PhotoAspect = '1:1' | '4:5' | '9:16' | '16:9';
+export type PhotoAngle = 'Hero 45°' | 'Flat Lay 90°' | 'Eye Level 0°' | 'Macro Detail' | 'In-Hand Lifestyle' | 'Dynamic Splash/Action';
+export type ShotStatus = 'Planned' | 'Tested' | 'Approved' | 'Completed';
+
+export interface PhotoShotItem {
+  id: string;
+  title: string;
+  format: PhotoAspect;
+  angle: PhotoAngle;
+  platform: 'Instagram Feed' | 'Instagram Reels / TikTok' | 'E-Commerce Catalog' | 'Website Hero Banner' | 'Print Ad / Billboard';
+  propNotes: string;
+  lightingNotes: string;
+  status: ShotStatus;
+  refImage?: string;
+}
+
+export interface PhotoShootConcept {
+  id: string;
+  briefId?: string; // Optional link to BriefProject
+  title: string;
+  clientName: string;
+  brandName: string;
+  campaignType: 'Hybrid Commercial & Social' | 'Commercial Catalog' | 'Social Media Feeds' | 'Reels / Video Campaign';
+  themeMood: string; // e.g., 'Earthy Warm & Organic', 'Clean Minimalist Clinical', 'Moody High-End Dark', 'Sunlit Golden Hour'
+  surfaceKey: string;
+  customSurfaceName?: string;
+  selectedProps: string[];
+  palette: string[];
+  cameraSettings: {
+    lens: string; // e.g. 50mm f/1.8, 85mm f/1.4, 100mm Macro
+    shutter: string; // e.g. 1/160s, 1/250s
+    aperture: string; // e.g. f/2.8, f/5.6, f/8
+    iso: string; // e.g. ISO 100
+  };
+  lights: StudioLight[];
+  shots: PhotoShotItem[];
+  colorGradingNotes: string;
+  callSheetDate: string;
+  callSheetLocation: string;
+  photographerName: string;
+  stylistName: string;
+  updatedAt: string;
+}

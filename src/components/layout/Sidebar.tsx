@@ -10,7 +10,8 @@ import {
   RefreshCw, 
   Users, 
   Compass,
-  ArrowUpRight
+  ArrowUpRight,
+  Camera
 } from 'lucide-react';
 import { ActiveTab, Role } from '../../types';
 
@@ -67,6 +68,12 @@ export const Sidebar: React.FC<SidebarProps> = ({
       label: 'Set Kemasan',
       subtitle: 'Product lineup & family shot',
       icon: Layers
+    },
+    {
+      id: 'photo-studio' as ActiveTab,
+      label: 'Photo Studio',
+      subtitle: 'Lighting diagram & shot matrix',
+      icon: Camera
     },
     {
       id: 'client-review' as ActiveTab,
