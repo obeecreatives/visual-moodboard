@@ -114,6 +114,36 @@ export interface VisualPhotoGuide {
   ratio: 'Square 1:1' | 'Landscape 16:9' | 'Potrait 4:3' | 'Story / Reels 9:16';
 }
 
+export interface PackagingLegalAndContent {
+  talentaName: string;         // e.g. "Aldrien Andriansyah"
+  mentorName: string;          // e.g. "Lalu Mahendra"
+  businessName: string;        // e.g. "CV Dawana Herbal Nusantara"
+  phone: string;               // e.g. "0812-3456-7890"
+  productName: string;         // e.g. "Dawana Pure Wild Honey"
+  pirtNumber: string;          // e.g. "P-IRT 2095201010123-28"
+  halalNumber: string;         // e.g. "ID52110001234560723"
+  bpomNumber: string;          // e.g. "BPOM RI MD 867031001234"
+  producedIn: string;          // e.g. "Lombok Barat, NTB - Indonesia"
+  tagline: string;             // e.g. "Madu Murni Alami dari Hutan Tropis"
+  netto: string;               // e.g. "250 ml / 350 gram"
+  nutritionFacts: string;      // Informasi Nilai Gizi
+  ingredients: string;         // Komposisi Bahan
+  productPhotoRef: string;     // URL atau catatan foto produk
+  socialMedia: string;         // e.g. "@dawanahoney · www.dawana.id"
+  // Halaman 2: Spesifikasi Fisik & Labeling
+  targetMarketDesc: string;    // e.g. "Keluarga modern & pecinta produk kesehatan herbal alami usia 25-45"
+  priceRange: string;          // e.g. "Rp 45.000 - Rp 65.000"
+  labelDimensions: string;     // e.g. "18 cm x 6.5 cm (Full Wrap Jar)"
+  packagingType: string;       // e.g. "Jar Kaca Segi Enam (Hexagonal Glass Jar)"
+  colorNotes: string;          // e.g. "Kuning Keemasan (#F59E0B), Hitam Slate (#1E293B), Emas Foil"
+  labelMaterial: string;       // e.g. "Stiker Vinyl Matte + Spot UV Foil Emas"
+  logoReadiness: 'Sudah Ada Siap Pakai' | 'Perlu Redesign' | 'Belum Ada (Dibuatkan Baru)';
+  // Strip Approval Formal
+  accDate?: string;            // e.g. "2026-11-04"
+  accTalentaSignature?: string;// e.g. "Aldrien A."
+  accClientSignature?: string; // e.g. "Ahmad Fauzi (Owner)"
+}
+
 export interface BriefProject {
   id: string;
   briefNumber: string;         // e.g. "OBEE-2026-001"
@@ -140,6 +170,7 @@ export interface BriefProject {
   refImages: string[];
   mockupConfig: MockupConfig;
   sceneConfig: SceneConfig;
+  packagingSpec?: PackagingLegalAndContent;
   approvalNotes?: string;
   verifiedBy?: string;
   verifiedAt?: string;

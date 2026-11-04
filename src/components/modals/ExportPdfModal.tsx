@@ -13,6 +13,7 @@ import { BriefProject } from '../../types';
 import { generatePdfViaGas } from '../../services/gasService';
 import html2canvas from 'html2canvas';
 import { jsPDF } from 'jspdf';
+import { OfficialDesignBriefSheet } from './OfficialDesignBriefSheet';
 
 interface ExportPdfModalProps {
   isOpen: boolean;
@@ -27,6 +28,7 @@ export const ExportPdfModal: React.FC<ExportPdfModalProps> = ({
   brief,
   gasUrl
 }) => {
+  const [showOfficialSheet, setShowOfficialSheet] = useState(false);
   const [isExportingClient, setIsExportingClient] = useState(false);
   const [isExportingGas, setIsExportingGas] = useState(false);
   const [gasResult, setGasResult] = useState<{ pdfBase64?: string; fileName?: string; slidesUrl?: string; error?: string } | null>(null);
@@ -195,38 +197,61 @@ export const ExportPdfModal: React.FC<ExportPdfModalProps> = ({
         {/* Modal Body */}
         <div className="p-6 space-y-4">
           
-          {/* Option 1: Browser PDF Engine */}
-          <div className="rounded-2xl border border-slate-700/80 bg-slate-800/60 p-4 space-y-2">
-            <div className="flex items-center justify-between">
-              <h4 className="text-xs font-bold text-white flex items-center gap-1.5">
-                <Download size={14} className="text-red-400" />
-                <span>Export PDF Instan (Browser Engine)</span>
-              </h4>
-              <span className="rounded bg-emerald-500/20 text-emerald-400 border border-emerald-500/30 px-2 py-0.5 text-[9px] font-bold">
-                0.01s Cepat
-              </span>
+            {/* Option 1: Official 2-Page Design Brief Sheet (Matching Reference PDF) */}
+            <div className="rounded-2xl border border-blue-500/50 bg-blue-950/30 p-4 space-y-2">
+              <div className="flex items-center justify-between">
+                <h4 className="text-xs font-bold text-white flex items-center gap-1.5">
+                  <FileText size={14} className="text-blue-400" />
+                  <span>Format Resmi: Design Brief &amp; Visual Kemasan (2 Halaman)</span>
+                </h4>
+                <span className="rounded bg-blue-500/20 text-blue-300 border border-blue-500/40 px-2 py-0.5 text-[9px] font-bold uppercase">
+                  Standar Dokumen
+                </span>
+              </div>
+              <p className="text-[11px] text-slate-300 leading-relaxed">
+                Format resmi sesuai formulir kemasan: Halaman 1 (Identitas Talenta/Mentor, Legalitas P-IRT, Halal, BPOM, Diproduksi Di, Netto &amp; Komposisi) dan Halaman 2 (Spesifikasi Fisik, Personality Produk, Look &amp; Feel, serta Strip Approval ACC).
+              </p>
+              <button
+                onClick={() => setShowOfficialSheet(true)}
+                className="w-full flex items-center justify-center gap-2 rounded-xl bg-blue-600 hover:bg-blue-700 px-4 py-2.5 text-xs font-bold text-white shadow transition"
+              >
+                <FileText size={14} />
+                <span>Buka &amp; Cetak Format Resmi 2 Halaman</span>
+              </button>
             </div>
-            <p className="text-[11px] text-slate-400">
-              Menggabungkan Halaman Cover Brand, Brief Personality, dan Moodboard Swatches langsung menjadi file PDF resolusi tinggi siap kirim ke klien.
-            </p>
-            <button
-              onClick={handleExportClientPdf}
-              disabled={isExportingClient}
-              className="w-full flex items-center justify-center gap-2 rounded-xl bg-red-600 hover:bg-red-700 px-4 py-2.5 text-xs font-bold text-white shadow transition disabled:opacity-50"
-            >
-              {isExportingClient ? (
-                <>
-                  <Loader2 size={14} className="animate-spin" />
-                  <span>Membuat PDF...</span>
-                </>
-              ) : (
-                <>
-                  <Download size={14} />
-                  <span>Unduh Dokumen PDF Instan</span>
-                </>
-              )}
-            </button>
-          </div>
+
+            {/* Option 2: Browser PDF Engine */}
+            <div className="rounded-2xl border border-slate-700/80 bg-slate-800/60 p-4 space-y-2">
+              <div className="flex items-center justify-between">
+                <h4 className="text-xs font-bold text-white flex items-center gap-1.5">
+                  <Download size={14} className="text-red-400" />
+                  <span>Export PDF Instan Brand Guideline (Cover + Palette)</span>
+                </h4>
+                <span className="rounded bg-emerald-500/20 text-emerald-400 border border-emerald-500/30 px-2 py-0.5 text-[9px] font-bold">
+                  0.01s Cepat
+                </span>
+              </div>
+              <p className="text-[11px] text-slate-400">
+                Menggabungkan Halaman Cover Brand, Brief Personality, dan Moodboard Swatches langsung menjadi file PDF resolusi tinggi siap kirim ke klien.
+              </p>
+              <button
+                onClick={handleExportClientPdf}
+                disabled={isExportingClient}
+                className="w-full flex items-center justify-center gap-2 rounded-xl bg-red-600 hover:bg-red-700 px-4 py-2.5 text-xs font-bold text-white shadow transition disabled:opacity-50"
+              >
+                {isExportingClient ? (
+                  <>
+                    <Loader2 size={14} className="animate-spin" />
+                    <span>Membuat PDF...</span>
+                  </>
+                ) : (
+                  <>
+                    <Download size={14} />
+                    <span>Unduh Dokumen PDF Instan</span>
+                  </>
+                )}
+              </button>
+            </div>
 
           {/* Option 2: Server Google Slides & PDF Engine */}
           <div className="rounded-2xl border border-slate-700/80 bg-slate-800/60 p-4 space-y-2">
@@ -307,6 +332,13 @@ export const ExportPdfModal: React.FC<ExportPdfModalProps> = ({
         </div>
 
       </div>
+
+      {/* Official 2-Page Design Brief Modal */}
+      <OfficialDesignBriefSheet
+        isOpen={showOfficialSheet}
+        onClose={() => setShowOfficialSheet(false)}
+        brief={brief}
+      />
     </div>
   );
 };
