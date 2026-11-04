@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { 
   BriefProject, 
   MockupConfig, 
@@ -29,9 +29,11 @@ import {
   Type, 
   Layers, 
   Image as ImageIcon,
-  Check
+  Check,
+  Globe
 } from 'lucide-react';
 import html2canvas from 'html2canvas';
+import { ThreeMockupCanvas } from '../mockups/ThreeMockupCanvas';
 
 interface MockupViewProps {
   brief: BriefProject;
@@ -50,6 +52,7 @@ export const MockupView: React.FC<MockupViewProps> = ({
   onUpdateBrief,
   theme
 }) => {
+  const [renderEngine, setRenderEngine] = useState<'3d' | '2d'>('3d');
   const m = brief.mockupConfig;
   const shape = SHAPES[m.shape] || SHAPES.box;
   const baseColor = m.color || '#C9B896';
@@ -364,38 +367,82 @@ export const MockupView: React.FC<MockupViewProps> = ({
 
       </div>
 
-      {/* Center Column (6 cols): 3D Realistic SVG Stage Canvas */}
+      {/* Center Column (6 cols): 3D Realistic WebGL vs 2D SVG Stage Canvas */}
       <div className="lg:col-span-6 space-y-3">
         
-        <div className="flex items-center justify-between">
-          <span className="text-xs text-slate-400 font-mono">
-            {SHAPE_LABELS[m.shape]?.toUpperCase()} • {m.materialStyle.toUpperCase()}
-          </span>
-          <div className="flex items-center gap-2">
+        {/* Hybrid OS Engine Switcher: 3D Real-Time WebGL vs 2D Vector Flat */}
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2.5 p-3 rounded-2xl border border-slate-700/80 bg-slate-900 shadow-sm">
+          <div className="flex items-center gap-1.5 overflow-x-auto pb-1 sm:pb-0 scrollbar-none">
+            <span className="text-[10px] uppercase font-bold tracking-wider text-slate-400 mr-1 hidden sm:inline">Engine:</span>
+            
+            <button
+              onClick={() => setRenderEngine('3d')}
+              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold transition shadow-sm whitespace-nowrap ${
+                renderEngine === '3d'
+                  ? 'bg-red-600 text-white shadow-red-950/40'
+                  : 'bg-slate-800 text-slate-400 hover:text-white border border-slate-700/70'
+              }`}
+            >
+              <Sparkles size={13} className={renderEngine === '3d' ? 'text-white' : 'text-slate-400'} />
+              <span>3D Studio Interaktif (360° PBR)</span>
+              <span className="px-1.5 py-0.2 rounded text-[9px] bg-black/25 text-red-200 uppercase font-mono">
+                Realistis
+              </span>
+            </button>
+
+            <button
+              onClick={() => setRenderEngine('2d')}
+              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold transition whitespace-nowrap ${
+                renderEngine === '2d'
+                  ? 'bg-red-600 text-white shadow-red-950/40'
+                  : 'bg-slate-800 text-slate-400 hover:text-white border border-slate-700/70'
+              }`}
+            >
+              <Box size={13} className={renderEngine === '2d' ? 'text-white' : 'text-slate-400'} />
+              <span>2D Vektor Cepat (17 SVG)</span>
+            </button>
+          </div>
+
+          <div className="flex items-center gap-2 justify-end">
+            <span className="text-xs text-slate-400 font-mono hidden md:inline">
+              {SHAPE_LABELS[m.shape]?.split(' / ')[0]}
+            </span>
             <button
               onClick={handleResetMockup}
-              className="flex items-center gap-1 rounded-xl border border-slate-700 bg-slate-800 px-3 py-1.5 text-xs text-slate-300 hover:bg-slate-700 transition"
+              className="flex items-center gap-1 rounded-xl border border-slate-700 bg-slate-800 px-2.5 py-1.5 text-xs text-slate-300 hover:bg-slate-700 transition"
               title="Reset ke pengaturan default"
             >
               <RotateCcw size={12} />
-              <span>Reset</span>
+              <span className="hidden sm:inline">Reset</span>
             </button>
-            <button
-              onClick={exportMockupPng}
-              className="flex items-center gap-1.5 rounded-xl border border-red-500/40 bg-red-600 px-3 py-1.5 text-xs font-semibold text-white hover:bg-red-700 transition shadow"
-            >
-              <Download size={13} />
-              <span>Unduh Mockup PNG</span>
-            </button>
+            {renderEngine === '2d' && (
+              <button
+                onClick={exportMockupPng}
+                className="flex items-center gap-1.5 rounded-xl border border-red-500/40 bg-red-600 px-3 py-1.5 text-xs font-semibold text-white hover:bg-red-700 transition shadow"
+              >
+                <Download size={13} />
+                <span className="hidden sm:inline">Unduh PNG</span>
+              </button>
+            )}
           </div>
         </div>
 
-        {/* Stage Container */}
-        <div 
-          id="mockupStageElement"
-          className="relative flex flex-col items-center justify-center rounded-2xl p-6 min-h-[500px] shadow-xl overflow-hidden"
-          style={{ background: SCENES_BG[m.scene] || SCENES_BG['studio-light'] }}
-        >
+        {/* Dynamic Canvas Rendering: 3D Real-Time Three.js vs 2D SVG */}
+        {renderEngine === '3d' ? (
+          <div id="mockupStageElement" className="w-full">
+            <ThreeMockupCanvas
+              config={m}
+              onUpdateConfig={updateMock}
+              brandName={brief.brandName}
+              theme={theme}
+            />
+          </div>
+        ) : (
+          <div 
+            id="mockupStageElement"
+            className="relative flex flex-col items-center justify-center rounded-2xl p-6 min-h-[500px] shadow-xl overflow-hidden"
+            style={{ background: SCENES_BG[m.scene] || SCENES_BG['studio-light'] }}
+          >
           {/* Packaging Container */}
           <div 
             className="relative"
@@ -497,6 +544,7 @@ export const MockupView: React.FC<MockupViewProps> = ({
             obeecreatives 3D Packaging Renderer
           </div>
         </div>
+        )}
 
       </div>
 
