@@ -1,0 +1,1785 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Packaging & Logo Builder — obeecreatives</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;700&family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+<style>
+  :root{
+    --black:#0d0d0d;
+    --red:#e31e2b;
+    --red-dark:#b3141f;
+    --white:#ffffff;
+    --bg:#f0f0ee;
+    --ink:#18181a;
+    --muted:#6c6c72;
+    --line:#e0e0db;
+    --card:#ffffff;
+  }
+  *{box-sizing:border-box;}
+  body{margin:0;background:var(--bg);color:var(--ink);font-family:'Inter',sans-serif;}
+  h1,h2,h3,.display{font-family:'Space Grotesk',sans-serif;}
+  .mono{font-family:'JetBrains Mono',monospace;}
+  button{font-family:inherit;cursor:pointer;}
+  input,textarea,select{font-family:inherit;}
+
+  /* ---------- top bar ---------- */
+  .topbar{
+    background:var(--black);color:#fff;padding:14px 26px;display:flex;align-items:center;
+    justify-content:space-between;gap:16px;flex-wrap:wrap;
+  }
+  .brandblock{display:flex;flex-direction:column;}
+  .brand{display:flex;align-items:baseline;gap:2px;}
+  .brand .obee{font-weight:700;font-size:19px;font-family:'Space Grotesk',sans-serif;}
+  .brand .creatives{font-weight:700;font-size:19px;color:var(--red);font-family:'Space Grotesk',sans-serif;}
+  .brand-sub{font-size:10.5px;color:#9a9a9a;letter-spacing:.06em;text-transform:uppercase;margin-top:1px;}
+
+  .tabpills{display:flex;gap:8px;}
+  .tabpill{
+    background:transparent;border:1px solid #3a3a3a;color:#cfcfcf;border-radius:20px;
+    padding:9px 18px;font-size:12.5px;font-weight:600;
+  }
+  .tabpill.active{background:var(--red);border-color:var(--red);color:#fff;}
+  .tabpill:not(.active):hover{border-color:#666;color:#fff;}
+
+  .topactions{display:flex;gap:8px;}
+  .topactions .btn{background:transparent;border:1px solid #3a3a3a;color:#e6e6e6;}
+  .topactions .btn:hover{border-color:#777;}
+  .topactions .btn.accent{background:var(--red);border-color:var(--red);color:#fff;}
+  .topactions .btn.accent:hover{background:var(--red-dark);}
+  .topactions .btn.primary{background:#fff;border-color:#fff;color:var(--black);}
+  .topactions .btn.primary:hover{background:#dcdcdc;}
+  .topactions .btn-icon{width:34px;height:34px;padding:0;border-radius:50%;display:inline-flex;align-items:center;justify-content:center;font-weight:700;font-size:14px;flex-shrink:0;}
+
+  /* ---------- layout ---------- */
+  .app{width:100%;padding:28px 32px 80px;}
+  .view{display:none;}
+  .view.active{display:grid;grid-template-columns:270px 1fr 270px;gap:22px;align-items:start;}
+  .controls-left, .controls-right{
+    min-width:0;
+    position:sticky;
+    top:16px;
+    max-height:calc(100vh - 32px);
+    overflow-y:auto;
+    overflow-x:hidden;
+    padding-right:4px;
+    scrollbar-width:thin;
+    scrollbar-color: var(--line) transparent;
+  }
+  .controls-left::-webkit-scrollbar, .controls-right::-webkit-scrollbar{width:6px;}
+  .controls-left::-webkit-scrollbar-track, .controls-right::-webkit-scrollbar-track{background:transparent;}
+  .controls-left::-webkit-scrollbar-thumb, .controls-right::-webkit-scrollbar-thumb{background:var(--line);border-radius:3px;}
+  .controls-left::-webkit-scrollbar-thumb:hover, .controls-right::-webkit-scrollbar-thumb:hover{background:#b9b8b0;}
+  @media (max-width:1100px){ .view.active{grid-template-columns:240px 1fr 240px;} }
+  @media (max-width:900px){
+    .view.active{grid-template-columns:1fr;}
+    .topbar{flex-direction:column;align-items:flex-start;}
+    .controls-left, .controls-right{position:static;max-height:none;overflow:visible;padding-right:0;}
+  }
+
+  .btn{border-radius:6px;padding:9px 14px;font-size:12.5px;font-weight:600;border:1px solid var(--line);background:#fff;color:var(--ink);}
+  .btn:hover{border-color:#c8c8c2;}
+  .btn.block{width:100%;display:block;text-align:center;}
+  .btn.primary{background:var(--black);color:#fff;border-color:var(--black);}
+  .btn.primary:hover{background:#000;}
+  .btn.accent{background:var(--red);color:#fff;border-color:var(--red);}
+  .btn.accent:hover{background:var(--red-dark);}
+
+  /* control cards (sidebar-style, matches obeecreatives form panels) */
+  .field-card{background:#fff;border:1px solid var(--line);border-radius:8px;padding:16px;margin-bottom:14px;}
+  .field-card .card-label{font-size:10.5px;text-transform:uppercase;letter-spacing:.06em;color:var(--muted);font-weight:600;margin-bottom:12px;}
+  label.field{display:block;margin-bottom:12px;}
+  label.field:last-child{margin-bottom:0;}
+  label.field span{display:block;font-size:11.5px;color:var(--muted);margin-bottom:5px;}
+  input[type=text], select{
+    width:100%;border:1px solid var(--line);border-radius:6px;padding:8px 10px;font-size:12.5px;color:var(--ink);background:#fff;
+  }
+  input[type=color]{width:100%;height:38px;border:1px solid var(--line);border-radius:6px;padding:3px;cursor:pointer;background:#fff;}
+  input[type=range]{width:100%;accent-color:var(--red);}
+  .row2{display:grid;grid-template-columns:1fr 1fr;gap:10px;}
+
+  /* chips (presets / shapes) */
+  .chipgrid{display:flex;flex-wrap:wrap;gap:8px;}
+  .chip{border:1px solid var(--line);background:#fff;color:var(--ink);font-size:12px;padding:7px 12px;border-radius:20px;cursor:pointer;}
+  .chip.active{background:var(--red);border-color:var(--red);color:#fff;}
+  .chip:not(.active):hover{border-color:#b9b8b0;}
+
+  /* mood tags */
+  .tag-wrap{display:flex;flex-wrap:wrap;gap:8px;align-items:center;}
+  .tag{background:#fff;border:1px solid var(--line);border-radius:20px;padding:6px 8px 6px 14px;font-size:12.5px;display:flex;align-items:center;gap:8px;}
+  .tag button{background:none;border:none;color:var(--muted);font-size:14px;line-height:1;padding:2px;}
+  .tag button:hover{color:var(--red);}
+  .tag-input{border:1px dashed #c8c8c2;background:transparent;border-radius:20px;padding:6px 14px;font-size:12.5px;flex:1;min-width:120px;outline:none;}
+  .tag-input:focus{border-color:var(--red);}
+
+  .filebtn{
+    display:block;border:1.5px dashed #c8c8c2;border-radius:8px;padding:20px 10px;text-align:center;
+    font-size:11.5px;color:var(--muted);cursor:pointer;
+  }
+  .filebtn:hover{border-color:var(--red);color:var(--red);}
+
+  /* section shells (numbered, matches reference) */
+  .board-card{background:#fff;border:1px solid var(--line);border-radius:10px;padding:24px 24px 20px;min-height:520px;}
+  .board-head{display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:6px;}
+  .board-head h2{font-size:22px;margin:0;font-weight:700;}
+  .board-head .meta{font-size:10.5px;color:var(--muted);text-align:right;line-height:1.6;}
+  .board-head .meta b{color:var(--ink);}
+
+  .section{margin-top:28px;}
+  .section-head{display:flex;align-items:baseline;justify-content:space-between;margin-bottom:14px;}
+  .section-head h3{font-size:13px;text-transform:uppercase;letter-spacing:.08em;color:var(--ink);margin:0;display:flex;align-items:center;gap:8px;}
+  .section-head h3 .num{color:var(--red);font-family:'JetBrains Mono',monospace;font-size:12px;}
+  .section-hint{font-size:11px;color:var(--muted);}
+
+  /* palette swatches */
+  .palette-row{display:flex;flex-wrap:wrap;gap:14px;}
+  .swatch{width:110px;}
+  .swatch-color{height:74px;border-radius:8px;border:1px solid rgba(0,0,0,.06);position:relative;}
+  .swatch-color::after{content:'';position:absolute;top:8px;left:50%;transform:translateX(-50%);width:12px;height:12px;border-radius:50%;background:rgba(255,255,255,.55);border:1px solid rgba(0,0,0,.08);}
+  .swatch-hex{font-family:'JetBrains Mono',monospace;font-size:10.5px;text-align:center;margin-top:6px;}
+  .swatch-hsl{font-family:'JetBrains Mono',monospace;font-size:9.5px;text-align:center;color:var(--muted);}
+
+  /* pinned reference board (signature element, matches obeecreatives contact-sheet feel) */
+  .board{
+    background-color:#e9e8e2;background-image:radial-gradient(#d7d6cf 1px, transparent 1px);
+    background-size:16px 16px;border-radius:10px;padding:24px 20px 10px;
+    display:flex;flex-wrap:wrap;gap:24px 20px;min-height:150px;
+  }
+  .ref-card{width:150px;background:#fff;padding:8px 8px 12px;box-shadow:0 6px 14px rgba(0,0,0,.14);position:relative;}
+  .ref-card:nth-child(3n+1){transform:rotate(-2.3deg);}
+  .ref-card:nth-child(3n+2){transform:rotate(1.6deg);}
+  .ref-card:nth-child(3n+3){transform:rotate(-0.8deg);}
+  .ref-card:hover{transform:rotate(0deg) scale(1.04);z-index:5;}
+  .ref-pin{position:absolute;top:-6px;left:50%;transform:translateX(-50%);width:11px;height:11px;border-radius:50%;background:var(--red);box-shadow:0 2px 3px rgba(0,0,0,.35);}
+  .ref-img-wrap{width:100%;height:120px;background:#eee;border-radius:2px;overflow:hidden;}
+  .ref-img-wrap img{width:100%;height:100%;object-fit:cover;display:block;}
+  .ref-del{position:absolute;top:3px;right:3px;background:rgba(0,0,0,.55);color:#fff;border:none;border-radius:50%;width:18px;height:18px;font-size:11px;line-height:1;opacity:0;transition:opacity .15s;}
+  .ref-card:hover .ref-del{opacity:1;}
+  .add-ref-card{
+    width:150px;min-height:150px;border:1.5px dashed #b9b8b0;border-radius:6px;display:flex;flex-direction:column;
+    align-items:center;justify-content:center;gap:6px;background:rgba(255,255,255,.35);color:#7c7c74;font-size:10.5px;text-align:center;padding:8px;
+  }
+
+  .kwrow{display:flex;flex-wrap:wrap;gap:8px;}
+  .kwchip{border:1px solid var(--line);padding:6px 12px;border-radius:20px;font-family:'JetBrains Mono',monospace;font-size:11px;color:var(--ink);}
+
+  .fontpreview .fp-label{font-size:11px;color:var(--muted);font-weight:600;text-transform:uppercase;letter-spacing:.04em;margin-bottom:8px;}
+  .fontpreview .fp-display{font-size:30px;font-weight:700;margin:0 0 4px;}
+  .fontpreview .fp-body{font-size:13.5px;margin:0;color:var(--muted);}
+
+  /* mockup stage */
+  .stagebg{width:100%;border-radius:8px;display:flex;align-items:center;justify-content:center;padding:30px;min-height:420px;}
+  .shapewrap{position:relative;width:300px;}
+  .shapewrap svg{display:block;width:100%;height:auto;filter:drop-shadow(0 3px 5px rgba(0,0,0,0.10));}
+  .labelzone{position:absolute;overflow:hidden;}
+  .logo-img{position:absolute;left:50%;top:50%;max-width:200%;pointer-events:none;}
+  .textblock{position:absolute;left:50%;top:50%;text-align:center;white-space:nowrap;pointer-events:none;}
+  .textblock .pname{font-weight:700;margin:0;line-height:1.1;}
+  .textblock .ptag{margin:2px 0 0;opacity:0.85;}
+  .stagecaption{font-family:'JetBrains Mono',monospace;font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:.06em;text-align:center;margin-top:14px;}
+
+  /* layer cards (extra logo / extra text controls) */
+  .layer-card{padding:14px;}
+  .layer-head{display:flex;justify-content:space-between;align-items:center;font-size:11.5px;font-weight:600;color:var(--ink);margin-bottom:10px;}
+  .layer-head button.layer-del{background:none;border:none;color:var(--muted);font-size:15px;line-height:1;padding:2px 4px;}
+  .layer-head button.layer-del:hover{color:var(--red);}
+  .layer-thumb{width:100%;height:56px;border-radius:6px;background:#f5f5f2;border:1px solid var(--line);display:flex;align-items:center;justify-content:center;overflow:hidden;margin-bottom:10px;}
+  .layer-thumb img{max-width:100%;max-height:100%;object-fit:contain;}
+  .extra-img{position:absolute;max-width:120px;pointer-events:none;}
+  .extra-text{position:absolute;white-space:nowrap;pointer-events:none;font-weight:600;text-align:center;}
+
+  /* scene (multi-item set) stage */
+  .scene-row{display:flex;align-items:flex-end;justify-content:center;gap:26px;flex-wrap:wrap;min-height:420px;padding:26px 20px;width:100%;}
+  .scene-item{position:relative;}
+  .scene-item svg{display:block;width:100%;height:100%;filter:drop-shadow(0 3px 4px rgba(0,0,0,0.08));}
+  .scene-logo-zone{position:absolute;display:flex;align-items:center;justify-content:center;overflow:hidden;}
+  .scene-logo-zone img{max-width:70%;max-height:70%;object-fit:contain;}
+  .scene-color-chip{display:inline-flex;align-items:center;justify-content:center;width:26px;height:26px;border-radius:50%;border:2px solid transparent;cursor:pointer;padding:0;background:none;}
+  .scene-color-chip.active{border-color:var(--red);}
+  .scene-color-chip .dot{display:block;width:18px;height:18px;border-radius:50%;border:1px solid rgba(0,0,0,.15);}
+
+  /* brief produk */
+  textarea{width:100%;border:1px solid var(--line);border-radius:6px;padding:8px 10px;font-size:12.5px;color:var(--ink);background:#fff;resize:vertical;min-height:70px;line-height:1.5;}
+  .pbar-row{margin-bottom:18px;}
+  .pbar-row:last-child{margin-bottom:0;}
+  .pbar-labels{display:flex;justify-content:space-between;font-size:11.5px;color:var(--ink);margin-bottom:7px;font-weight:600;}
+  .pbar-track{position:relative;height:6px;background:var(--line);border-radius:3px;margin:0 6px;}
+  .pbar-dot{position:absolute;top:50%;width:14px;height:14px;border-radius:50%;background:var(--red);transform:translate(-50%,-50%);box-shadow:0 2px 4px rgba(0,0,0,.25);transition:left .15s;}
+  .lf-pill{display:inline-block;padding:6px 14px;border-radius:20px;font-size:12px;margin:0 8px 8px 0;border:1px solid var(--line);color:var(--muted);background:#fff;}
+  .lf-pill.selected{background:var(--ink);color:#fff;border-color:var(--ink);font-weight:600;}
+  .brief-kv{display:flex;justify-content:space-between;gap:10px;font-size:12.5px;padding:7px 0;border-bottom:1px dashed var(--line);}
+  .brief-kv:last-child{border-bottom:none;}
+  .brief-kv .k{color:var(--muted);}
+  .brief-kv .v{color:var(--ink);font-weight:600;text-align:right;}
+  .brief-mini-swatch{width:26px;height:26px;border-radius:6px;display:inline-block;border:1px solid rgba(0,0,0,.08);margin-right:6px;}
+
+  /* modal bantuan */
+  .modal-overlay{position:fixed;inset:0;background:rgba(13,13,13,.6);display:none;align-items:center;justify-content:center;z-index:1000;padding:24px;}
+  .modal-overlay.open{display:flex;}
+  .modal-box{background:#fff;border-radius:12px;max-width:560px;width:100%;max-height:85vh;overflow-y:auto;padding:30px 30px 22px;position:relative;box-shadow:0 20px 50px rgba(0,0,0,.35);}
+  .modal-close{position:absolute;top:16px;right:18px;background:none;border:none;font-size:18px;line-height:1;cursor:pointer;color:var(--muted);padding:4px;}
+  .modal-close:hover{color:var(--ink);}
+  .modal-title{font-size:20px;font-weight:700;color:var(--ink);margin-bottom:2px;padding-right:24px;}
+  .modal-version{font-family:'JetBrains Mono',monospace;font-size:11px;color:var(--muted);margin-bottom:18px;}
+  .modal-section{margin-bottom:6px;}
+  .modal-section h4{font-size:11px;text-transform:uppercase;letter-spacing:.05em;color:var(--red);margin-bottom:8px;font-weight:700;}
+  .modal-section ol{margin:0;padding-left:18px;font-size:12.5px;color:var(--ink);line-height:1.75;}
+  .modal-footer{border-top:1px solid var(--line);margin-top:18px;padding-top:14px;font-size:10.5px;color:var(--muted);text-align:center;line-height:1.6;}
+
+  footer.note{margin-top:30px;text-align:center;font-size:10.5px;color:var(--muted);}
+  footer.note b{color:var(--ink);}
+</style>
+</head>
+<body>
+
+  <div class="topbar">
+    <div class="brandblock">
+      <div class="brand"><span class="obee">obee</span><span class="creatives">creatives</span></div>
+      <div class="brand-sub">Packaging &amp; Logo Builder</div>
+    </div>
+    <div class="tabpills">
+      <button class="tabpill active" data-view="brief">Brief Produk</button>
+      <button class="tabpill" data-view="mood">Moodboard</button>
+      <button class="tabpill" data-view="mock">Mockup Kemasan</button>
+      <button class="tabpill" data-view="scene">Set Kemasan</button>
+    </div>
+    <div class="topactions">
+      <button class="btn" id="saveBtn">Simpan</button>
+      <button class="btn accent" id="topExport">Unduh PNG</button>
+      <button class="btn primary" id="exportGuidelineBtn">Export Panduan PDF</button>
+      <button class="btn btn-icon" id="helpBtn" aria-label="Bantuan" title="Bantuan">?</button>
+    </div>
+  </div>
+
+  <div class="app">
+
+  <!-- ===================== BRIEF PRODUK VIEW ===================== -->
+  <section class="view active" id="view-brief">
+    <div class="controls controls-left">
+
+      <div class="field-card">
+        <div class="card-label">Info Produk</div>
+        <label class="field"><span>Nama produk</span>
+          <input type="text" id="briefProductName" placeholder="Nama produk / brand">
+        </label>
+      </div>
+
+      <div class="field-card">
+        <div class="card-label">Personality Produk</div>
+        <div id="briefPersonalityControls"></div>
+      </div>
+    </div>
+
+    <div class="board-card" id="briefBoard">
+      <div class="board-head">
+        <div>
+          <h2>Brief Visual Identity</h2>
+          <div class="section-hint" id="brief-subtitle">Nama produk belum diisi</div>
+        </div>
+        <div class="meta"><b>OBEECREATIVES</b><br>CREATIVE BRIEF</div>
+      </div>
+
+      <div class="section">
+        <div class="section-head"><h3><span class="num">01</span> Personality Produk</h3><span class="section-hint">Ekonomis&#8596;Mewah, dsb.</span></div>
+        <div id="brief-personality-board"></div>
+      </div>
+
+      <div class="section">
+        <div class="section-head"><h3><span class="num">02</span> Logo Look &amp; Feel</h3><span class="section-hint">Kata kunci kesan logo</span></div>
+        <div id="brief-lookfeel-board"></div>
+      </div>
+
+      <div class="section">
+        <div class="section-head"><h3><span class="num">03</span> Arahan Logo &amp; Warna</h3><span class="section-hint">Mengikuti tab Moodboard</span></div>
+        <div id="brief-logocolor-board"></div>
+      </div>
+
+      <div class="section">
+        <div class="section-head"><h3><span class="num">04</span> Target Pasar &amp; Gaya Visual</h3><span class="section-hint">Segmentasi &amp; karakter foto</span></div>
+        <div id="brief-market-board"></div>
+      </div>
+
+      <div class="section">
+        <div class="section-head"><h3><span class="num">05</span> Gaya Caption &amp; Catatan</h3><span class="section-hint">Nada komunikasi</span></div>
+        <div id="brief-notes-board"></div>
+      </div>
+    </div>
+
+    <div class="controls controls-right">
+
+      <div class="field-card">
+        <div class="card-label">Logo Look &amp; Feel</div>
+        <div class="chipgrid" id="briefLookfeelPicker"></div>
+      </div>
+
+      <div class="field-card">
+        <div class="card-label">Arahan Logo</div>
+        <label class="field"><span>Jenis logo</span>
+          <select id="briefJenisLogo">
+            <option>Logogram</option>
+            <option>Logotype</option>
+            <option selected>Kombinasi Logogram+Logotype</option>
+          </select>
+        </label>
+        <label class="field"><span>Bentuk icon</span>
+          <select id="briefBentukIcon">
+            <option>Geometris</option>
+            <option>Organik</option>
+            <option>Maskot/Karakter</option>
+            <option>Inisial/Monogram</option>
+            <option>Custom</option>
+          </select>
+        </label>
+      </div>
+
+      <div class="field-card">
+        <div class="card-label">Target Pasar</div>
+        <label class="field"><span>Kelas ekonomi</span>
+          <select id="briefKelasEkonomi">
+            <option>Menengah Bawah</option>
+            <option selected>Menengah Atas</option>
+          </select>
+        </label>
+        <label class="field"><span>Usia</span>
+          <select id="briefUsia">
+            <option>Anak-anak</option>
+            <option>Remaja</option>
+            <option selected>Dewasa</option>
+          </select>
+        </label>
+      </div>
+
+      <div class="field-card">
+        <div class="card-label">Gaya Visual Foto</div>
+        <label class="field"><span>Karakter foto</span>
+          <select id="briefKarakterFoto">
+            <option>Low Key</option>
+            <option>High Key</option>
+            <option selected>Normal</option>
+          </select>
+        </label>
+        <label class="field"><span>Rasio gambar</span>
+          <select id="briefRasioGambar">
+            <option>Square 1:1</option>
+            <option>Landscape</option>
+            <option>Potrait 4:3</option>
+          </select>
+        </label>
+      </div>
+
+      <div class="field-card">
+        <div class="card-label">Gaya Caption &amp; Catatan</div>
+        <label class="field"><span>Gaya caption</span>
+          <input type="text" id="briefGayaCaption" placeholder="mis. santai, singkat, pakai emoji">
+        </label>
+        <label class="field"><span>Catatan tambahan</span>
+          <textarea id="briefCatatan" placeholder="Referensi kompetitor, larangan, hal khusus lain..."></textarea>
+        </label>
+      </div>
+
+      <div class="field-card">
+        <div class="card-label">Integrasi Google Sheets &amp; Apps Script</div>
+        <div id="gasAutoConnected" style="display:none;background:#eef7ee;border:1px solid #bfe3bf;color:#2f6b2f;font-size:11px;padding:8px 10px;border-radius:6px;margin-bottom:10px;line-height:1.5;">✓ Berjalan sebagai Apps Script Web App — terhubung otomatis, tidak perlu URL manual.</div>
+        <div id="gasUrlField">
+          <label class="field"><span>URL Web App Apps Script</span>
+            <input type="text" id="gasWebAppUrl" placeholder="https://script.google.com/macros/s/…/exec">
+          </label>
+        </div>
+        <div style="display:flex;gap:8px;margin-top:4px;">
+          <button class="btn" id="gasArchiveBtn" style="flex:1;font-size:11.5px;padding:9px 8px;">Kirim ke Sheets</button>
+          <button class="btn accent" id="gasPdfBtn" style="flex:1;font-size:11.5px;padding:9px 8px;">PDF via Apps Script</button>
+        </div>
+        <p class="section-hint" id="gasStatus" style="margin-top:8px;min-height:14px;"></p>
+        <p class="section-hint" id="gasSetupHint" style="margin-top:6px;">Perlu setup sekali di Google Sheets — lihat panduan setup terpisah.</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- ===================== MOODBOARD VIEW ===================== -->
+  <section class="view" id="view-mood">
+    <div class="controls controls-left">
+
+      <div class="field-card">
+        <div class="card-label">Preset Arah Desain</div>
+        <div class="chipgrid" id="moodPresets"></div>
+      </div>
+
+      <div class="field-card">
+        <div class="card-label">Palet Kustom (opsional)</div>
+        <label class="field"><span>Warna dasar</span>
+          <input type="color" id="seedColor" value="#e31e2b">
+        </label>
+        <div class="chipgrid" id="schemeButtons" style="margin-bottom:12px;">
+          <div class="chip" data-scheme="analog">Analog</div>
+          <div class="chip" data-scheme="complement">Komplementer</div>
+          <div class="chip" data-scheme="mono">Monokrom</div>
+        </div>
+        <button class="btn block" id="applyCustomPalette">Terapkan Palet Kustom</button>
+      </div>
+    </div>
+
+    <div class="board-card" id="moodBoard">
+      <div class="board-head">
+        <div>
+          <h2 id="mb-title">Natural &amp; Organik</h2>
+          <div class="section-hint">Moodboard — Kemasan &amp; Identitas Visual</div>
+        </div>
+        <div class="meta"><b>OBEECREATIVES</b><br>MOOD REF SHEET</div>
+      </div>
+
+      <div class="section">
+        <div class="section-head"><h3><span class="num">01</span> Palet Warna</h3><span class="section-hint">Acuan kemasan &amp; identitas</span></div>
+        <div class="palette-row" id="mb-swatches"></div>
+      </div>
+
+      <div class="section fontpreview">
+        <div class="section-head"><h3><span class="num">02</span> Tipografi</h3><span class="section-hint">Pasangan huruf</span></div>
+        <p class="fp-display" id="mb-fontdisplay">Aa Bb Cc — Judul Kemasan</p>
+        <p class="fp-body" id="mb-fontbody">Teks pendukung / deskripsi produk / komposisi 000gr</p>
+      </div>
+
+      <div class="section">
+        <div class="section-head"><h3><span class="num">03</span> Mood &amp; Tone</h3><span class="section-hint">Kata kunci suasana visual</span></div>
+        <div class="kwrow" id="mb-keywords"></div>
+      </div>
+
+      <div class="section">
+        <div class="section-head"><h3><span class="num">04</span> Referensi Visual</h3><span class="section-hint">Papan mood</span></div>
+        <div class="board" id="mb-refgrid"></div>
+      </div>
+    </div>
+
+    <div class="controls controls-right">
+
+      <div class="field-card">
+        <div class="card-label">Kata Kunci Mood</div>
+        <div class="tag-wrap" id="kwList"></div>
+      </div>
+
+      <div class="field-card">
+        <div class="card-label">Referensi Visual</div>
+        <label class="filebtn" id="refUploadBtn">+ Upload gambar referensi (bisa lebih dari satu)
+          <input type="file" id="refUpload" accept="image/*" multiple style="display:none;">
+        </label>
+      </div>
+    </div>
+  </section>
+
+  <!-- ===================== MOCKUP VIEW ===================== -->
+  <section class="view" id="view-mock">
+    <div class="controls controls-left">
+
+      <div class="field-card">
+        <div class="card-label">Bentuk Kemasan</div>
+        <div class="chipgrid" id="shapePicker"></div>
+      </div>
+
+      <div class="field-card">
+        <div class="card-label">Warna Bahan</div>
+        <div class="chipgrid" id="colorFromPalette" style="margin-bottom:12px;"></div>
+        <label class="field"><span>atau pilih manual</span>
+          <input type="color" id="mockColor" value="#C9B896">
+        </label>
+        <label class="field"><span>Latar studio</span>
+          <select id="sceneSelect">
+            <option value="studio-light">Studio terang</option>
+            <option value="studio-dark">Studio gelap</option>
+            <option value="kraft">Meja kraft/kayu</option>
+          </select>
+        </label>
+      </div>
+
+      <div class="field-card">
+        <div class="card-label">Tekstur Permukaan</div>
+        <label class="field"><span>Jenis tekstur</span>
+          <select id="textureSelect">
+            <option value="none">Tanpa tekstur</option>
+            <option value="kraft-grain">Kertas / Grain</option>
+            <option value="linen">Linen Fiber</option>
+            <option value="canvas">Canvas Kasar</option>
+            <option value="dots">Dot Halftone</option>
+          </select>
+        </label>
+        <label class="field"><span>Intensitas</span><input type="range" id="textureOpacity" min="0" max="0.9" step="0.05" value="0.35"></label>
+      </div>
+
+      <div class="field-card">
+        <div class="card-label">Gaya Material &amp; Jendela Produk</div>
+        <label class="field"><span>Gaya material</span>
+          <select id="materialStyleSelect">
+            <option value="glossy">Glossy (foil/plastik mengilap)</option>
+            <option value="matte">Matte (permukaan halus, tidak mengilap)</option>
+            <option value="kraft">Kraft (nuansa hangat, warm-tone)</option>
+          </select>
+        </label>
+        <label class="field" style="display:flex;align-items:center;gap:8px;">
+          <input type="checkbox" id="windowEnabled" style="width:auto;">
+          <span style="margin:0;">Tampilkan jendela produk</span>
+        </label>
+        <span class="section-hint" id="windowHint">Tersedia untuk bentuk pouch/bag. Kalau tumpang tindih dengan teks, geser "Posisi Y teks" di bawah.</span>
+      </div>
+
+      <div class="field-card">
+        <div class="card-label">Logo</div>
+        <label class="filebtn" id="logoUploadBtn">+ Upload logo (PNG transparan disarankan)
+          <input type="file" id="logoUpload" accept="image/*" style="display:none;">
+        </label>
+        <div style="height:12px;"></div>
+        <label class="field"><span>Skala</span><input type="range" id="logoScale" min="0.2" max="2" step="0.05" value="0.8"></label>
+        <div class="row2">
+          <label class="field"><span>Posisi X</span><input type="range" id="logoX" min="-60" max="60" step="1" value="0"></label>
+          <label class="field"><span>Posisi Y</span><input type="range" id="logoY" min="-60" max="60" step="1" value="-10"></label>
+        </div>
+        <label class="field"><span>Rotasi</span><input type="range" id="logoRot" min="-30" max="30" step="1" value="0"></label>
+      </div>
+    </div>
+
+    <div class="board-card">
+      <div class="board-head">
+        <div>
+          <h2>Mockup Kemasan</h2>
+          <div class="section-hint">Live preview — sesuaikan kontrol di kiri &amp; kanan</div>
+        </div>
+        <div class="meta"><b>OBEECREATIVES</b><br>PACKAGING MOCKUP</div>
+      </div>
+      <div class="stagebg" id="stageBg">
+        <div class="shapewrap" id="shapeWrap"></div>
+      </div>
+      <div class="stagecaption" id="mockCaption">BOX · KOTAK/KARTON</div>
+    </div>
+
+    <div class="controls controls-right">
+
+      <div class="field-card">
+        <div class="card-label">Logo / Gambar Tambahan</div>
+        <label class="filebtn" id="addExtraImgBtn">+ Tambah logo/gambar lain (badge, seal, QR, dll)
+          <input type="file" id="addExtraImgUpload" accept="image/*" multiple style="display:none;">
+        </label>
+        <div id="extraImgList" style="margin-top:12px;"></div>
+      </div>
+
+      <div class="field-card">
+        <div class="card-label">Nama Produk &amp; Teks</div>
+        <label class="field"><span>Nama produk</span><input type="text" id="prodName" placeholder="Nama Produk"></label>
+        <label class="field"><span>Tagline / keterangan</span><input type="text" id="prodTag" placeholder="tagline singkat"></label>
+        <label class="field"><span>Font teks</span>
+          <select id="textFont">
+            <option value="Space Grotesk">Space Grotesk</option>
+            <option value="Inter">Inter</option>
+            <option value="JetBrains Mono">JetBrains Mono</option>
+          </select>
+        </label>
+        <div class="row2">
+          <label class="field"><span>Warna teks</span><input type="color" id="textColor" value="#18181a"></label>
+          <label class="field"><span>Ukuran</span><input type="range" id="textSize" min="8" max="28" step="1" value="15"></label>
+        </div>
+        <label class="field"><span>Posisi Y teks</span><input type="range" id="textY" min="-60" max="80" step="1" value="35"></label>
+      </div>
+
+      <div class="field-card">
+        <div class="card-label">Elemen Teks Tambahan</div>
+        <button class="btn block" id="addExtraTxtBtn">+ Tambah Teks Baru</button>
+        <div id="extraTxtList" style="margin-top:12px;"></div>
+      </div>
+
+      <button class="btn block" id="resetMock">Reset Pengaturan</button>
+    </div>
+  </section>
+
+  <!-- ===================== SET KEMASAN (MULTI-ITEM SCENE) VIEW ===================== -->
+  <section class="view" id="view-scene">
+    <div class="controls controls-left">
+
+      <div class="field-card">
+        <div class="card-label">Item dalam Set</div>
+        <button class="btn block" id="addSceneItemBtn">+ Tambah Item</button>
+        <div id="sceneItemList" style="margin-top:12px;"></div>
+      </div>
+
+      <button class="btn block" id="resetScene">Reset Set</button>
+    </div>
+
+    <div class="board-card">
+      <div class="board-head">
+        <div>
+          <h2>Set Kemasan</h2>
+          <div class="section-hint">Beberapa bentuk kemasan tampil sekaligus — cocok untuk product lineup / family shot</div>
+        </div>
+        <div class="meta"><b>OBEECREATIVES</b><br>PACKAGING SET</div>
+      </div>
+      <div class="stagebg" id="sceneStageBg">
+        <div class="scene-row" id="sceneStage"></div>
+      </div>
+      <div class="stagecaption" id="sceneCaption">3 ITEM DALAM SET</div>
+    </div>
+
+    <div class="controls controls-right">
+
+      <div class="field-card">
+        <div class="card-label">Latar &amp; Logo Bersama</div>
+        <label class="field"><span>Latar studio</span>
+          <select id="sceneBgSelect">
+            <option value="studio-light">Studio terang</option>
+            <option value="studio-dark">Studio gelap</option>
+            <option value="kraft">Meja kraft/kayu</option>
+          </select>
+        </label>
+        <label class="field" style="display:flex;align-items:center;gap:8px;">
+          <input type="checkbox" id="sceneShowLogo" checked style="width:auto;">
+          <span style="margin:0;">Tampilkan logo di tiap item</span>
+        </label>
+        <div style="height:6px;"></div>
+        <span class="section-hint">Logo yang dipakai sama dengan logo di tab Mockup Kemasan.</span>
+      </div>
+    </div>
+  </section>
+
+  <!-- ===================== MODAL BANTUAN ===================== -->
+  <div class="modal-overlay" id="helpModal">
+    <div class="modal-box">
+      <button class="modal-close" id="helpModalClose" aria-label="Tutup">✕</button>
+      <div class="modal-title" id="helpProjectName"></div>
+      <div class="modal-version" id="helpProjectVersion"></div>
+
+      <div class="modal-section">
+        <h4>Cara Penggunaan</h4>
+        <ol>
+          <li><b>Brief Produk</b> — isi personality produk (slider), Logo Look &amp; Feel, dan detail brief lainnya. Bisa dikirim ke Google Sheets atau dijadikan PDF via Apps Script (perlu setup sekali — lihat file panduan setup terpisah).</li>
+          <li><b>Moodboard</b> — pilih preset arah desain atau buat palet warna manual, atur pasangan font, kata kunci mood, dan referensi visual.</li>
+          <li><b>Mockup Kemasan</b> — pilih bentuk kemasan, warna bahan, tekstur permukaan, logo, dan teks produk untuk mockup satu kemasan.</li>
+          <li><b>Set Kemasan</b> — tampilkan beberapa bentuk kemasan sekaligus dalam satu adegan (product lineup / family shot).</li>
+          <li>Tombol <b>Simpan</b> menyimpan progres di browser ini (localStorage), <b>Unduh PNG</b> mengekspor tab yang sedang aktif, dan <b>Export Panduan PDF</b> menggabungkan seluruh tab jadi satu dokumen guideline siap approval klien.</li>
+        </ol>
+      </div>
+
+      <div class="modal-footer" id="helpFooterText"></div>
+      <div class="modal-footer" style="border-top:none;padding-top:2px;">Jika menemukan bug atau kendala teknis, silahkan hubungi Developer <b>Lalu Mahendra</b>.</div>
+    </div>
+  </div>
+
+  <footer class="note" id="mainFooter"></footer>
+  </div>
+
+<script>
+/* ---------------- storage helpers (autosave, teks/pengaturan saja) ---------------- */
+async function sGet(key){
+  try{
+    if(typeof window.storage !== 'undefined' && window.storage && typeof window.storage.get === 'function'){
+      const r = await window.storage.get(key);
+      return r ? JSON.parse(r.value) : null;
+    }
+  }catch(e){ /* window.storage tidak tersedia/gagal — lanjut ke localStorage */ }
+  try{
+    const raw = localStorage.getItem(key);
+    return raw ? JSON.parse(raw) : null;
+  }catch(e){ return null; }
+}
+async function sSet(key,val){
+  try{
+    if(typeof window.storage !== 'undefined' && window.storage && typeof window.storage.set === 'function'){
+      await window.storage.set(key, JSON.stringify(val));
+      return;
+    }
+  }catch(e){ /* window.storage tidak tersedia/gagal — lanjut ke localStorage */ }
+  try{
+    localStorage.setItem(key, JSON.stringify(val));
+  }catch(e){ console.error('gagal simpan', e); }
+}
+
+/* ---------------- data ---------------- */
+const PRESETS = {
+  natural: {label:'Natural & Organik', palette:['#2F3B25','#6B7A4A','#8C5E3C','#C9B896','#EDE6D6'],
+    fontDisplay:'Space Grotesk', fontBody:'Inter', keywords:['organik','earthy','kraft paper','tenang','hand-drawn']},
+  luxury: {label:'Minimalis Mewah', palette:['#141414','#5C564C','#8A8378','#C9A24B','#F5F1E8'],
+    fontDisplay:'Space Grotesk', fontBody:'Inter', keywords:['elegan','premium','emas','clean','eksklusif']},
+  bold: {label:'Berani obeecreatives', palette:['#0d0d0d','#e31e2b','#ffffff','#f0f0ee','#6c6c72'],
+    fontDisplay:'Space Grotesk', fontBody:'JetBrains Mono', keywords:['berani','kontras','modern','editorial','clean']},
+  rustic: {label:'Rustic Craft', palette:['#3E2A1E','#7A4B32','#B98554','#E7C9A3','#F1E4CE'],
+    fontDisplay:'Space Grotesk', fontBody:'JetBrains Mono', keywords:['artisan','tradisional','hangat','kraft','otentik']},
+  modern: {label:'Modern & Clean', palette:['#0D1B2A','#3B5BFF','#8D99AE','#E7E9ED','#FFFFFF'],
+    fontDisplay:'Space Grotesk', fontBody:'Inter', keywords:['minimalis','futuristik','presisi','tech','clean']}
+};
+
+const SHAPES = {
+  box: { viewBox:'0 0 300 300', zone:{x:80,y:120,w:120,h:100}, shadowY:0.905,
+    baseClip:'<rect x="60" y="90" width="160" height="180"/>',
+    build:(base,top,side)=>`
+      <polygon points="60,90 220,90 260,50 100,50" fill="${top}"/>
+      <polygon points="220,90 260,50 260,230 220,270" fill="${side}"/>
+      <rect x="60" y="90" width="160" height="180" fill="${base}"/>
+      <rect x="60" y="90" width="160" height="180" fill="url(#gloss)"/>` },
+  pouch: { viewBox:'0 0 300 300', zone:{x:88,y:120,w:124,h:130}, windowZone:{x:105,y:82,w:90,h:38,rx:12},
+    baseClip:'<rect x="68" y="66" width="164" height="220" rx="40"/>',
+    build:(base,top,side)=>`
+      <polygon points="83,70 83,49 103,70" fill="${side}"/>
+      <polygon points="217,70 217,49 197,70" fill="${side}"/>
+      <rect x="68" y="66" width="164" height="220" rx="40" fill="${base}"/>
+      <path d="M148,80 C142,150 150,220 146,272" fill="none" stroke="#fff" stroke-opacity="0.22" stroke-width="14" stroke-linecap="round"/>
+      <path d="M172,90 C178,150 172,215 176,268" fill="none" stroke="#000" stroke-opacity="0.05" stroke-width="16" stroke-linecap="round"/>
+      <rect x="68" y="66" width="164" height="220" rx="40" fill="url(#gloss)"/>
+      <line x1="82" y1="93" x2="218" y2="93" stroke="${top}" stroke-width="2" opacity="0.45"/>` },
+  bottle: { viewBox:'0 0 200 320', zone:{x:50,y:158,w:100,h:92},
+    baseClip:'<rect x="40" y="108" width="120" height="190" rx="14"/>',
+    build:(base,top,side)=>`
+      <rect x="80" y="8" width="40" height="30" rx="4" fill="${side}"/>
+      <rect x="85" y="38" width="30" height="28" fill="${side}"/>
+      <polygon points="60,66 140,66 160,108 40,108" fill="${top}"/>
+      <rect x="40" y="108" width="120" height="190" rx="14" fill="${base}"/>
+      <rect x="40" y="108" width="120" height="190" rx="14" fill="url(#gloss)"/>
+      <rect x="40" y="108" width="120" height="190" rx="14" fill="url(#cylLight)"/>` },
+  jar: { viewBox:'0 0 220 260', zone:{x:45,y:112,w:130,h:92},
+    baseClip:'<rect x="30" y="55" width="160" height="185" rx="20"/>',
+    build:(base,top,side)=>`
+      <rect x="40" y="8" width="140" height="30" rx="6" fill="${side}"/>
+      <rect x="50" y="36" width="120" height="12" fill="${top}"/>
+      <rect x="30" y="55" width="160" height="185" rx="20" fill="${base}"/>
+      <rect x="30" y="55" width="160" height="185" rx="20" fill="url(#gloss)"/>
+      <rect x="30" y="55" width="160" height="185" rx="20" fill="url(#cylLight)"/>` },
+  tube: { viewBox:'0 0 160 320', zone:{x:50,y:150,w:60,h:110},
+    baseClip:'<rect x="45" y="95" width="70" height="200" rx="14"/>',
+    build:(base,top,side)=>`
+      <polygon points="72,8 88,8 92,26 68,26" fill="${side}"/>
+      <rect x="58" y="26" width="44" height="24" rx="4" fill="${side}"/>
+      <polygon points="45,50 115,50 105,95 55,95" fill="${top}"/>
+      <rect x="45" y="95" width="70" height="200" rx="14" fill="${base}"/>
+      <rect x="45" y="95" width="70" height="200" rx="14" fill="url(#gloss)"/>
+      <rect x="45" y="95" width="70" height="200" rx="14" fill="url(#cylLight)"/>` },
+  paperbag: { viewBox:'0 0 260 300', zone:{x:60,y:112,w:140,h:108}, shadowY:0.86,
+    baseClip:'<rect x="40" y="70" width="160" height="188"/>',
+    build:(base,top,side)=>`
+      <path d="M75,30 C75,5 100,5 100,30" fill="none" stroke="#2c2a26" stroke-width="6"/>
+      <path d="M160,30 C160,5 185,5 185,30" fill="none" stroke="#2c2a26" stroke-width="6"/>
+      <rect x="40" y="52" width="190" height="18" fill="${top}"/>
+      <rect x="200" y="70" width="30" height="188" fill="${side}"/>
+      <rect x="40" y="70" width="160" height="188" fill="${base}"/>
+      <rect x="40" y="70" width="160" height="188" fill="url(#gloss)"/>
+      <line x1="40" y1="90" x2="230" y2="90" stroke="#000" stroke-opacity="0.08" stroke-width="2"/>` },
+  kraftbag: { viewBox:'0 0 220 300', zone:{x:52,y:118,w:112,h:118}, shadowY:0.867,
+    baseClip:'<rect x="40" y="72" width="124" height="188"/>',
+    build:(base,top,side)=>`
+      <polygon points="40,60 60,44 80,60 100,44 120,60 140,44 160,60 176,44 176,72 40,72" fill="${top}"/>
+      <rect x="164" y="72" width="16" height="188" fill="${side}"/>
+      <rect x="40" y="72" width="124" height="188" fill="${base}"/>
+      <rect x="40" y="72" width="124" height="188" fill="url(#gloss)"/>
+      <line x1="40" y1="96" x2="164" y2="96" stroke="#000" stroke-opacity="0.10" stroke-width="2"/>` },
+  giftbox: { viewBox:'0 0 300 300', zone:{x:85,y:162,w:110,h:88}, shadowY:0.90,
+    baseClip:'<rect x="60" y="140" width="160" height="130"/>',
+    build:(base,top,side)=>`
+      <rect x="60" y="130" width="160" height="12" fill="${side}"/>
+      <polygon points="220,140 260,110 260,240 220,270" fill="${side}"/>
+      <rect x="60" y="140" width="160" height="130" fill="${base}"/>
+      <rect x="60" y="140" width="160" height="130" fill="url(#gloss)"/>
+      <polygon points="230,88 270,58 270,104 230,134" fill="${side}"/>
+      <rect x="50" y="88" width="180" height="46" fill="${top}"/>
+      <rect x="50" y="88" width="180" height="46" fill="url(#gloss)"/>` },
+  mailerbox: { viewBox:'0 0 300 260', zone:{x:75,y:122,w:130,h:96},
+    baseClip:'<rect x="50" y="90" width="180" height="150"/>',
+    build:(base,top,side)=>`
+      <polygon points="230,90 260,70 260,220 230,240" fill="${side}"/>
+      <polygon points="50,90 90,54 200,54 230,90" fill="${top}"/>
+      <rect x="50" y="90" width="180" height="150" fill="${base}"/>
+      <rect x="50" y="90" width="180" height="150" fill="url(#gloss)"/>
+      <line x1="50" y1="90" x2="230" y2="90" stroke="#000" stroke-opacity="0.15" stroke-width="2"/>` },
+  canister: { viewBox:'0 0 220 300', zone:{x:45,y:112,w:130,h:108}, shadowY:0.883,
+    baseClip:'<rect x="30" y="55" width="160" height="210"/>',
+    build:(base,top,side)=>`
+      <ellipse cx="110" cy="264" rx="80" ry="15" fill="${side}"/>
+      <rect x="30" y="55" width="160" height="210" fill="${base}"/>
+      <rect x="30" y="55" width="160" height="210" fill="url(#gloss)"/>
+      <rect x="30" y="55" width="160" height="210" fill="url(#cylLight)"/>
+      <rect x="30" y="44" width="160" height="14" fill="${side}"/>
+      <ellipse cx="110" cy="44" rx="80" ry="17" fill="${top}"/>` },
+  standpouch: { viewBox:'0 0 300 340', zone:{x:90,y:170,w:120,h:120}, windowZone:{x:105,y:95,w:90,h:65,rx:14},
+    baseClip:'<rect x="65" y="48" width="170" height="270" rx="26"/>',
+    build:(base,top,side)=>`
+      <rect x="90" y="18" width="120" height="30" rx="10" fill="${side}"/>
+      <rect x="65" y="48" width="170" height="270" rx="26" fill="${base}"/>
+      <rect x="65" y="48" width="170" height="270" rx="26" fill="url(#gloss)"/>
+      <path d="M80,60 C140,110 170,160 230,120" fill="none" stroke="#000" stroke-opacity="0.06" stroke-width="3"/>
+      <path d="M85,75 C150,130 190,190 250,150" fill="none" stroke="#000" stroke-opacity="0.05" stroke-width="3"/>
+      <path d="M90,95 C160,150 200,210 260,175" fill="none" stroke="#fff" stroke-opacity="0.12" stroke-width="3"/>
+      <path d="M95,115 C165,175 205,235 255,205" fill="none" stroke="#000" stroke-opacity="0.05" stroke-width="2"/>
+      <path d="M100,140 C168,195 205,250 250,225" fill="none" stroke="#fff" stroke-opacity="0.08" stroke-width="2"/>
+      <line x1="78" y1="55" x2="108" y2="80" stroke="#333" stroke-width="1.4" stroke-dasharray="3,3"/>
+      <path d="M100,72 l9,-2 l-3,9 Z" fill="#333"/>` },
+  flowbag: { viewBox:'0 0 300 300', zone:{x:95,y:110,w:110,h:110}, windowZone:{x:112,y:68,w:76,h:38,rx:20},
+    baseClip:'<path d="M75,55 C58,100 58,200 75,245 L225,245 C242,200 242,100 225,55 Z"/>',
+    build:(base,top,side)=>`
+      <rect x="60" y="14" width="180" height="34" fill="${side}"/>
+      ${crimpLines(68,16,46,10,16)}
+      <path d="M75,55 C58,100 58,200 75,245 L225,245 C242,200 242,100 225,55 Z" fill="${base}"/>
+      <path d="M75,55 C58,100 58,200 75,245 L225,245 C242,200 242,100 225,55 Z" fill="url(#gloss)"/>
+      <rect x="60" y="246" width="180" height="34" fill="${side}"/>
+      ${crimpLines(68,248,278,10,16)}` },
+  zipperpouch: { viewBox:'0 0 300 340', zone:{x:90,y:150,w:120,h:110}, windowZone:{x:105,y:126,w:90,h:22,rx:8}, shadowY:0.882,
+    baseClip:'<rect x="70" y="90" width="160" height="210" rx="20"/>',
+    build:(base,top,side)=>`
+      <polygon points="70,90 70,58 96,90" fill="${side}"/>
+      <polygon points="230,90 230,58 204,90" fill="${side}"/>
+      <rect x="70" y="90" width="160" height="210" rx="20" fill="${base}"/>
+      <rect x="70" y="90" width="160" height="210" rx="20" fill="url(#gloss)"/>
+      <rect x="80" y="108" width="140" height="14" rx="6" fill="${top}"/>
+      <line x1="80" y1="115" x2="220" y2="115" stroke="#000" stroke-opacity="0.15" stroke-width="1.5" stroke-dasharray="4,3"/>
+      <rect x="70" y="272" width="160" height="28" rx="14" fill="${side}"/>
+      <rect x="70" y="272" width="160" height="28" rx="14" fill="url(#gloss)"/>` },
+  gabletop: { viewBox:'0 0 220 320', zone:{x:65,y:170,w:90,h:105},
+    baseClip:'<rect x="55" y="130" width="110" height="170"/>',
+    build:(base,top,side)=>`
+      <polygon points="55,130 110,95 165,130" fill="${top}"/>
+      <rect x="98" y="87" width="24" height="10" rx="3" fill="${side}"/>
+      <line x1="55" y1="130" x2="110" y2="95" stroke="#000" stroke-opacity="0.12" stroke-width="1.5"/>
+      <line x1="165" y1="130" x2="110" y2="95" stroke="#000" stroke-opacity="0.12" stroke-width="1.5"/>
+      <rect x="55" y="130" width="110" height="170" fill="${base}"/>
+      <rect x="55" y="130" width="110" height="170" fill="url(#gloss)"/>
+      <line x1="55" y1="160" x2="55" y2="290" stroke="#000" stroke-opacity="0.08" stroke-width="2"/>
+      <line x1="165" y1="160" x2="165" y2="290" stroke="#000" stroke-opacity="0.08" stroke-width="2"/>
+      <rect x="55" y="288" width="110" height="12" fill="${side}" opacity="0.6"/>` },
+  handlebag: { viewBox:'0 0 260 300', zone:{x:60,y:120,w:140,h:120}, shadowY:0.86,
+    baseClip:'<rect x="40" y="70" width="160" height="188"/>',
+    build:(base,top,side)=>`
+      <rect x="40" y="45" width="190" height="25" rx="4" fill="${top}"/>
+      <rect x="200" y="70" width="30" height="188" fill="${side}"/>
+      <rect x="40" y="70" width="160" height="188" fill="${base}"/>
+      <rect x="40" y="70" width="160" height="188" fill="url(#gloss)"/>
+      <ellipse cx="120" cy="57" rx="38" ry="10" fill="#000" opacity="0.32"/>
+      <line x1="40" y1="94" x2="230" y2="94" stroke="#000" stroke-opacity="0.08" stroke-width="2"/>` },
+  sachet: { viewBox:'0 0 160 300', zone:{x:35,y:150,w:90,h:80}, windowZone:{x:48,y:66,w:64,h:48,rx:8},
+    baseClip:'<path d="M35,44 C22,90 22,210 35,256 L125,256 C138,210 138,90 125,44 Z"/>',
+    build:(base,top,side)=>`
+      <rect x="20" y="18" width="120" height="26" fill="${side}"/>
+      ${crimpLines(28,20,42,7,15)}
+      <path d="M35,44 C22,90 22,210 35,256 L125,256 C138,210 138,90 125,44 Z" fill="${base}"/>
+      <path d="M35,44 C22,90 22,210 35,256 L125,256 C138,210 138,90 125,44 Z" fill="url(#gloss)"/>
+      <rect x="20" y="254" width="120" height="26" fill="${side}"/>
+      ${crimpLines(28,256,278,7,15)}
+      <line x1="24" y1="50" x2="42" y2="66" stroke="#333" stroke-width="1.2" stroke-dasharray="3,3"/>` },
+  flatpillow: { viewBox:'0 0 260 260', zone:{x:75,y:95,w:110,h:110}, windowZone:{x:80,y:42,w:100,h:60,rx:20}, shadowY:0.885,
+    baseClip:'<rect x="30" y="30" width="200" height="200" rx="30"/>',
+    build:(base,top,side)=>`
+      <rect x="30" y="30" width="200" height="200" rx="30" fill="${base}"/>
+      <rect x="30" y="30" width="200" height="200" rx="30" fill="url(#gloss)"/>
+      <line x1="45" y1="130" x2="215" y2="130" stroke="#000" stroke-opacity="0.06" stroke-width="2"/>
+      <path d="M30,60 C45,50 55,50 60,30" fill="none" stroke="${side}" stroke-width="3" opacity="0.4"/>
+      <path d="M230,60 C215,50 205,50 200,30" fill="none" stroke="${side}" stroke-width="3" opacity="0.4"/>` }
+};
+
+/* ---------------- texture defs (filters/patterns applied over the base clip) ---------------- */
+const TEXTURE_FILTERS = {
+  'kraft-grain': `<filter id="texf-kraft-grain" x="-20%" y="-20%" width="140%" height="140%">
+      <feTurbulence type="fractalNoise" baseFrequency="0.85" numOctaves="2" stitchTiles="stitch" result="n"/>
+      <feColorMatrix in="n" type="matrix" values="0 0 0 0 0  0 0 0 0 0  0 0 0 0 0  1.1 1.1 1.1 0 0"/>
+    </filter>`,
+  'linen': `<filter id="texf-linen" x="-20%" y="-20%" width="140%" height="140%">
+      <feTurbulence type="turbulence" baseFrequency="0.015 0.25" numOctaves="1" stitchTiles="stitch" result="n"/>
+      <feColorMatrix in="n" type="matrix" values="0 0 0 0 0  0 0 0 0 0  0 0 0 0 0  1.1 1.1 1.1 0 0"/>
+    </filter>`,
+  'canvas': `<filter id="texf-canvas" x="-20%" y="-20%" width="140%" height="140%">
+      <feTurbulence type="turbulence" baseFrequency="0.09" numOctaves="3" stitchTiles="stitch" result="n"/>
+      <feColorMatrix in="n" type="matrix" values="0 0 0 0 0  0 0 0 0 0  0 0 0 0 0  1.1 1.1 1.1 0 0"/>
+    </filter>`
+};
+const TEXTURE_PATTERN_DOTS = `<pattern id="texp-dots" width="8" height="8" patternUnits="userSpaceOnUse"><circle cx="4" cy="4" r="1.3" fill="#000"/></pattern>`;
+
+/* ---------------- shadow tanah (ground contact shadow) — dipakai di semua shape ---------------- */
+const SHADOW_BLUR_FILTER = `<filter id="shadowBlur" x="-60%" y="-60%" width="220%" height="220%"><feGaussianBlur stdDeviation="6"/></filter>`;
+function buildGroundShadow(vbW, vbH, shadowYFrac){
+  const cx=vbW/2, cy=vbH*(shadowYFrac!=null?shadowYFrac:0.94), rx=vbW*0.30, ry=rx*0.16;
+  return `<ellipse cx="${cx}" cy="${cy}" rx="${rx}" ry="${ry}" fill="#000000" opacity="0.30" filter="url(#shadowBlur)"/>`;
+}
+
+/* ---------------- cylinder light wrap — highlight vertikal untuk bentuk berpenampang bulat (botol/toples/tube/kaleng) ---------------- */
+const MATERIAL_CYL_SCALE = {glossy:1, matte:0.35, kraft:0.65};
+function cylLightDefFor(materialStyle){
+  const s = MATERIAL_CYL_SCALE[materialStyle] != null ? MATERIAL_CYL_SCALE[materialStyle] : 1;
+  return `<linearGradient id="cylLight" x1="0" y1="0" x2="1" y2="0">
+      <stop offset="0" stop-color="#000000" stop-opacity="${(0.16*s).toFixed(3)}"/>
+      <stop offset="0.22" stop-color="#000000" stop-opacity="0"/>
+      <stop offset="0.42" stop-color="#ffffff" stop-opacity="${(0.40*s).toFixed(3)}"/>
+      <stop offset="0.58" stop-color="#ffffff" stop-opacity="0"/>
+      <stop offset="1" stop-color="#000000" stop-opacity="${(0.14*s).toFixed(3)}"/>
+    </linearGradient>`;
+}
+
+/* ---------------- jendela produk (window): pola isi generik + fungsi render overlay ---------------- */
+const WINDOW_CONTENT_DOTS = [
+  {x:0.15,y:0.20,r:0.10,c:'#8B5E34'},{x:0.35,y:0.15,r:0.08,c:'#C9A227'},
+  {x:0.55,y:0.25,r:0.11,c:'#6B3F23'},{x:0.78,y:0.20,r:0.09,c:'#D9A441'},
+  {x:0.22,y:0.50,r:0.09,c:'#A8672E'},{x:0.48,y:0.55,r:0.12,c:'#7A4A26'},
+  {x:0.72,y:0.50,r:0.08,c:'#C98A3E'},{x:0.88,y:0.42,r:0.07,c:'#5E3A1E'},
+  {x:0.16,y:0.80,r:0.10,c:'#B97A38'},{x:0.42,y:0.82,r:0.08,c:'#8B5E34'},
+  {x:0.65,y:0.78,r:0.09,c:'#D9A441'},{x:0.85,y:0.75,r:0.07,c:'#6B3F23'}
+];
+function buildWindowOverlay(wz){
+  if(!wz) return '';
+  const rx = wz.rx||10;
+  const dots = WINDOW_CONTENT_DOTS.map(d=>{
+    const cx=wz.x+d.x*wz.w, cy=wz.y+d.y*wz.h, r=d.r*Math.min(wz.w,wz.h);
+    return `<circle cx="${cx.toFixed(1)}" cy="${cy.toFixed(1)}" r="${r.toFixed(1)}" fill="${d.c}" opacity="0.85"/>`;
+  }).join('');
+  return `
+    <clipPath id="winClip"><rect x="${wz.x}" y="${wz.y}" width="${wz.w}" height="${wz.h}" rx="${rx}"/></clipPath>
+    <g clip-path="url(#winClip)">
+      <rect x="${wz.x}" y="${wz.y}" width="${wz.w}" height="${wz.h}" fill="#f2ede0"/>
+      ${dots}
+      <rect x="${wz.x}" y="${wz.y}" width="${wz.w}" height="${wz.h}" fill="url(#gloss)" opacity="0.55"/>
+    </g>
+    <rect x="${wz.x}" y="${wz.y}" width="${wz.w}" height="${wz.h}" rx="${rx}" fill="none" stroke="#ffffff" stroke-opacity="0.55" stroke-width="2"/>`;
+}
+
+/* ---------------- gaya material: variasi warna & intensitas gradient gloss ---------------- */
+const MATERIAL_GLOSS = {
+  glossy: {c1:'#ffffff',o1:0.18,c2:'#ffffff',o2:0,c3:'#000000',o3:0.12},
+  matte:  {c1:'#ffffff',o1:0.06,c2:'#ffffff',o2:0,c3:'#000000',o3:0.06},
+  kraft:  {c1:'#f4e4c1',o1:0.16,c2:'#f4e4c1',o2:0,c3:'#3b2a18',o3:0.14}
+};
+const MATERIAL_LABELS = {glossy:'Glossy', matte:'Matte', kraft:'Kraft'};
+function glossDefsFor(materialStyle){
+  const m = MATERIAL_GLOSS[materialStyle] || MATERIAL_GLOSS.glossy;
+  return `<linearGradient id="gloss" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="${m.c1}" stop-opacity="${m.o1}"/>
+      <stop offset="0.35" stop-color="${m.c2}" stop-opacity="${m.o2}"/>
+      <stop offset="1" stop-color="${m.c3}" stop-opacity="${m.o3}"/>
+    </linearGradient>`;
+}
+const SHAPE_LABELS = {box:'Kotak/Karton', pouch:'Pouch Berdiri', bottle:'Botol', jar:'Toples', tube:'Tube',
+  paperbag:'Paper Bag', kraftbag:'Kraft Food Bag', giftbox:'Gift Box (Lid+Base)', mailerbox:'Mailer Box', canister:'Kaleng/Canister',
+  standpouch:'Pouch Berdiri (Realistis)', flowbag:'Flow Wrap (Snack/Chips)', zipperpouch:'Pouch Zipper (Doypack)',
+  gabletop:'Kotak Susu (Gable-Top)', handlebag:'Handle Bag (Die-Cut)', sachet:'Sachet/Saset', flatpillow:'Flat Pillow Bag'};
+const SCENES = {'studio-light':'linear-gradient(180deg,#f5f4f0,#e7e6e0)','studio-dark':'linear-gradient(180deg,#2b2926,#141312)','kraft':'linear-gradient(180deg,#c9a875,#a8804f)'};
+
+/* ---------------- brief produk: personality bipolar pairs & logo look/feel vocabulary ---------------- */
+const PERSONALITY_PAIRS = [
+  {key:'ekonomisMewah', left:'Ekonomis', right:'Mewah'},
+  {key:'feminimMaskulin', left:'Feminim', right:'Maskulin'},
+  {key:'tradisionalModern', left:'Tradisional', right:'Modern'},
+  {key:'simpleRumit', left:'Simple', right:'Rumit'},
+  {key:'monoFullcolor', left:'Monochrome', right:'Full Color'},
+  {key:'anakDewasa', left:'Anak', right:'Dewasa'},
+  {key:'funSerius', left:'Fun', right:'Serius'}
+];
+const LOOKFEEL_TAGS = ['Dynamic','Fun','Playful','Modern','Timeless','Creative','Techy','Fresh','Formal','Hipster','Traditional','Monochrome'];
+
+/* ---------------- state ---------------- */
+let state = {
+  mood:'natural', palette:[...PRESETS.natural.palette], fontDisplay:PRESETS.natural.fontDisplay,
+  fontBody:PRESETS.natural.fontBody, keywords:[...PRESETS.natural.keywords], refImages:[],
+  mock:{ shape:'box', color:PRESETS.natural.palette[3], scene:'studio-light', logo:null,
+    logoScale:0.8, logoX:0, logoY:-10, logoRot:0, prodName:'', prodTag:'', textFont:'Space Grotesk',
+    textColor:'#18181a', textSize:15, textY:35,
+    texture:'none', textureOpacity:0.35,
+    materialStyle:'glossy', windowEnabled:false,
+    extraImages:[], extraTexts:[] },
+  scene:{
+    items:[
+      {id:1, shape:'box', color:PRESETS.natural.palette[0]},
+      {id:2, shape:'pouch', color:PRESETS.natural.palette[1]},
+      {id:3, shape:'zipperpouch', color:PRESETS.natural.palette[3]}
+    ],
+    showLogo:true, scene:'studio-light'
+  },
+  brief:{
+    productName:'',
+    personality:{ ekonomisMewah:3, feminimMaskulin:3, tradisionalModern:3, simpleRumit:3, monoFullcolor:3, anakDewasa:3, funSerius:3 },
+    lookfeel:[],
+    jenisLogo:'Kombinasi Logogram+Logotype',
+    bentukIcon:'Geometris',
+    kelasEkonomi:'Menengah Atas',
+    usia:'Dewasa',
+    karakterFoto:'Normal',
+    rasioGambar:'Square 1:1',
+    gayaCaption:'',
+    catatan:''
+  }
+};
+/* ---------------- identitas proyek (dipakai di footer, modal bantuan, & penamaan file export) ---------------- */
+const PROJECT_NAME = 'Logo & Packaging Toolkit';
+const PROJECT_SLUG = 'LogoPackagingToolkit';
+const PROJECT_VERSION = 'v1.0';
+const FOOTER_TEXT = PROJECT_NAME + ' - All Rights Reserved . obeecreatives . Developed by Lalu Mahendra';
+const PDF_FOOTER_TEXT = 'obeecreatives - All Rights Reserved';
+
+let activeView = 'brief';
+
+/* ---------------- color helpers ---------------- */
+function hexToHSL(hex){
+  let r=parseInt(hex.slice(1,3),16)/255,g=parseInt(hex.slice(3,5),16)/255,b=parseInt(hex.slice(5,7),16)/255;
+  let max=Math.max(r,g,b),min=Math.min(r,g,b),h,s,l=(max+min)/2;
+  if(max===min){h=s=0;}else{let d=max-min;s=l>0.5?d/(2-max-min):d/(max+min);
+    switch(max){case r:h=(g-b)/d+(g<b?6:0);break;case g:h=(b-r)/d+2;break;case b:h=(r-g)/d+4;break;}h/=6;}
+  return [h*360,s*100,l*100];
+}
+function HSLToHex(h,s,l){
+  s/=100;l/=100;const k=n=>(n+h/30)%12;const a=s*Math.min(l,1-l);
+  const f=n=>l-a*Math.max(-1,Math.min(k(n)-3,Math.min(9-k(n),1)));
+  const toHex=x=>Math.round(255*x).toString(16).padStart(2,'0');
+  return '#'+toHex(f(0))+toHex(f(8))+toHex(f(4));
+}
+function shadeColor(hex,percent){let [h,s,l]=hexToHSL(hex);l=Math.max(0,Math.min(100,l+percent));return HSLToHex(h,s,l);}
+function crimpLines(xStart,y1,y2,count,gap){
+  let s='';
+  for(let i=0;i<count;i++){ const x=xStart+i*gap; s+=`<line x1="${x}" y1="${y1}" x2="${x}" y2="${y2}" stroke="#000" stroke-opacity="0.12" stroke-width="1.5"/>`; }
+  return s;
+}
+function generatePalette(seed,scheme){
+  let [h,s,l]=hexToHSL(seed);
+  if(scheme==='analog') return [HSLToHex((h-30+360)%360,s,Math.max(15,l-25)),HSLToHex((h-15+360)%360,s,Math.max(20,l-10)),seed,HSLToHex((h+15)%360,s,Math.min(85,l+15)),HSLToHex((h+30)%360,s*0.6,Math.min(92,l+30))];
+  if(scheme==='complement') return [HSLToHex(h,s,Math.max(15,l-20)),seed,HSLToHex((h+180)%360,s,l),HSLToHex((h+180)%360,s,Math.min(85,l+18)),HSLToHex(h,s*0.4,Math.min(92,l+35))];
+  return [HSLToHex(h,s,Math.max(10,l-35)),HSLToHex(h,s,Math.max(20,l-18)),seed,HSLToHex(h,s*0.7,Math.min(85,l+18)),HSLToHex(h,s*0.4,Math.min(94,l+35))];
+}
+function fontStackFor(name){return `'${name}', ${name==='JetBrains Mono'?'monospace':'sans-serif'}`;}
+
+/* ---------------- render: moodboard ---------------- */
+function renderMoodPresets(){
+  const el=document.getElementById('moodPresets'); el.innerHTML='';
+  Object.entries(PRESETS).forEach(([key,p])=>{
+    const c=document.createElement('div'); c.className='chip'+(state.mood===key?' active':''); c.textContent=p.label;
+    c.onclick=()=>{ state.mood=key; state.palette=[...p.palette]; state.fontDisplay=p.fontDisplay; state.fontBody=p.fontBody; state.keywords=[...p.keywords]; state.mock.color=p.palette[3]; renderAll(); };
+    el.appendChild(c);
+  });
+}
+function renderBoard(){
+  document.getElementById('mb-title').textContent = PRESETS[state.mood] ? PRESETS[state.mood].label : 'Palet Kustom';
+  const sw=document.getElementById('mb-swatches'); sw.innerHTML='';
+  state.palette.forEach(hex=>{
+    const d=document.createElement('div'); d.className='swatch';
+    const [h,s,l]=hexToHSL(hex);
+    d.innerHTML=`<div class="swatch-color" style="background:${hex}"></div><div class="swatch-hex">${hex.toUpperCase()}</div><div class="swatch-hsl">H${Math.round(h)} S${Math.round(s)} L${Math.round(l)}</div>`;
+    sw.appendChild(d);
+  });
+  document.getElementById('mb-fontdisplay').style.fontFamily=fontStackFor(state.fontDisplay);
+  document.getElementById('mb-fontbody').style.fontFamily=fontStackFor(state.fontBody);
+  document.getElementById('mb-fontdisplay').textContent=`Aa Bb Cc — ${state.fontDisplay}`;
+  document.getElementById('mb-fontbody').textContent=`${state.fontBody} — teks pendukung / deskripsi produk / komposisi 000gr`;
+
+  const kw=document.getElementById('mb-keywords'); kw.innerHTML='';
+  state.keywords.forEach(k=>{const s=document.createElement('span');s.className='kwchip';s.textContent=k;kw.appendChild(s);});
+
+  const rg=document.getElementById('mb-refgrid'); rg.innerHTML='';
+  state.refImages.forEach((src,i)=>{
+    const d=document.createElement('div'); d.className='ref-card';
+    d.innerHTML=`<div class="ref-pin"></div><button class="ref-del" data-i="${i}">✕</button><div class="ref-img-wrap"><img src="${src}"></div>`;
+    rg.appendChild(d);
+  });
+  const add=document.createElement('div'); add.className='add-ref-card'; add.innerHTML='🖼️<br>+ Upload referensi';
+  add.onclick=()=>document.getElementById('refUpload').click();
+  rg.appendChild(add);
+  rg.querySelectorAll('.ref-del').forEach(btn=>{ btn.onclick=(e)=>{ e.stopPropagation(); state.refImages.splice(parseInt(btn.dataset.i),1); renderBoard(); }; });
+}
+function renderKwEditor(){
+  const el=document.getElementById('kwList'); el.innerHTML='';
+  state.keywords.forEach((k,i)=>{
+    const t=document.createElement('span'); t.className='tag'; t.innerHTML=`${k} <button data-i="${i}">✕</button>`;
+    el.appendChild(t);
+  });
+  const inp=document.createElement('input'); inp.className='tag-input'; inp.placeholder='+ tambah kata kunci, Enter';
+  inp.addEventListener('keydown', e=>{ if(e.key==='Enter' && e.target.value.trim()){ state.keywords.push(e.target.value.trim()); renderKwEditor(); renderBoard(); } });
+  el.appendChild(inp);
+  el.querySelectorAll('button').forEach(b=>{ b.onclick=()=>{ state.keywords.splice(parseInt(b.dataset.i),1); renderKwEditor(); renderBoard(); }; });
+}
+
+/* ---------------- render: mockup ---------------- */
+function renderShapePicker(){
+  const el=document.getElementById('shapePicker'); el.innerHTML='';
+  Object.entries(SHAPE_LABELS).forEach(([key,label])=>{
+    const c=document.createElement('div'); c.className='chip'+(state.mock.shape===key?' active':''); c.textContent=label;
+    c.onclick=()=>{ state.mock.shape=key; renderShapePicker(); renderStage(); };
+    el.appendChild(c);
+  });
+}
+function renderColorFromPalette(){
+  const el=document.getElementById('colorFromPalette'); el.innerHTML='';
+  state.palette.forEach(hex=>{
+    const c=document.createElement('div'); c.className='chip'+(state.mock.color===hex?' active':'');
+    c.innerHTML=`<span style="display:inline-block;width:10px;height:10px;border-radius:50%;background:${hex};margin-right:6px;vertical-align:middle;border:1px solid rgba(0,0,0,.15);"></span>${hex.toUpperCase()}`;
+    c.onclick=()=>{ state.mock.color=hex; document.getElementById('mockColor').value=hex; renderColorFromPalette(); renderStage(); };
+    el.appendChild(c);
+  });
+}
+function renderStage(){
+  const shape=SHAPES[state.mock.shape]; const base=state.mock.color;
+  const top=shadeColor(base,14), side=shadeColor(base,-16);
+  const wrap=document.getElementById('shapeWrap');
+  const vb=shape.viewBox.split(' ').map(Number); const vbW=vb[2], vbH=vb[3];
+  const containerW=300, containerH=containerW*(vbH/vbW);
+
+  const m=state.mock;
+  let textureDefs='', textureOverlay='';
+  if(m.texture && m.texture!=='none'){
+    if(m.texture==='dots'){
+      textureDefs = TEXTURE_PATTERN_DOTS;
+      textureOverlay = `<rect x="0" y="0" width="${vbW}" height="${vbH}" fill="url(#texp-dots)" clip-path="url(#baseClip)" opacity="${m.textureOpacity}" style="mix-blend-mode:multiply"/>`;
+    } else {
+      textureDefs = TEXTURE_FILTERS[m.texture]||'';
+      textureOverlay = `<rect x="0" y="0" width="${vbW}" height="${vbH}" fill="#000000" filter="url(#texf-${m.texture})" clip-path="url(#baseClip)" opacity="${m.textureOpacity}" style="mix-blend-mode:multiply"/>`;
+    }
+  }
+
+  wrap.innerHTML=`<svg viewBox="${shape.viewBox}" width="100%" height="auto">
+    <defs>
+      ${glossDefsFor(m.materialStyle)}
+      ${cylLightDefFor(m.materialStyle)}
+      ${SHADOW_BLUR_FILTER}
+      <clipPath id="baseClip">${shape.baseClip}</clipPath>
+      ${textureDefs}
+    </defs>
+    ${buildGroundShadow(vbW, vbH, shape.shadowY)}
+    ${shape.build(base,top,side)}
+    ${textureOverlay}
+    ${m.windowEnabled && shape.windowZone ? buildWindowOverlay(shape.windowZone) : ''}
+  </svg>`;
+  wrap.style.height=containerH+'px';
+
+  const zone=shape.zone;
+  const zoneDiv=document.createElement('div'); zoneDiv.className='labelzone';
+  zoneDiv.style.left=(zone.x/vbW*100)+'%'; zoneDiv.style.top=(zone.y/vbH*100)+'%';
+  zoneDiv.style.width=(zone.w/vbW*100)+'%'; zoneDiv.style.height=(zone.h/vbH*100)+'%';
+
+  if(m.logo){
+    const img=document.createElement('img'); img.src=m.logo; img.className='logo-img';
+    img.style.transform=`translate(-50%,-50%) translate(${m.logoX}px, ${m.logoY}px) rotate(${m.logoRot}deg) scale(${m.logoScale})`;
+    img.style.maxWidth=(zone.w*1.4)+'px';
+    zoneDiv.appendChild(img);
+  }
+  const txt=document.createElement('div'); txt.className='textblock';
+  txt.style.transform=`translate(-50%,-50%) translate(0px, ${m.textY}px)`;
+  txt.style.fontFamily=fontStackFor(m.textFont); txt.style.color=m.textColor;
+  txt.innerHTML=`${m.prodName?`<p class="pname" style="font-size:${m.textSize}px;">${m.prodName}</p>`:''}${m.prodTag?`<p class="ptag" style="font-size:${Math.max(8,m.textSize*0.55)}px;">${m.prodTag}</p>`:''}`;
+  zoneDiv.appendChild(txt);
+  wrap.appendChild(zoneDiv);
+
+  /* extra logo/image layers — positioned anywhere on the packaging, independent of the label zone */
+  m.extraImages.forEach(im=>{
+    const eimg=document.createElement('img'); eimg.src=im.src; eimg.className='extra-img';
+    eimg.style.left=im.x+'%'; eimg.style.top=im.y+'%';
+    eimg.style.transform=`translate(-50%,-50%) rotate(${im.rot}deg) scale(${im.scale})`;
+    wrap.appendChild(eimg);
+  });
+
+  /* extra free-floating text elements */
+  m.extraTexts.forEach(tx=>{
+    const etxt=document.createElement('div'); etxt.className='extra-text';
+    etxt.style.left=tx.x+'%'; etxt.style.top=tx.y+'%';
+    etxt.style.transform=`translate(-50%,-50%) rotate(${tx.rot}deg)`;
+    etxt.style.fontFamily=fontStackFor(tx.font); etxt.style.color=tx.color; etxt.style.fontSize=tx.size+'px';
+    etxt.textContent=tx.text;
+    wrap.appendChild(etxt);
+  });
+
+  document.getElementById('stageBg').style.background=SCENES[m.scene];
+  document.getElementById('mockCaption').textContent=SHAPE_LABELS[m.shape].toUpperCase()+' · '+base.toUpperCase();
+}
+
+/* ---------------- render: extra logo/image layers ---------------- */
+function renderExtraImages(){
+  const el=document.getElementById('extraImgList'); el.innerHTML='';
+  state.mock.extraImages.forEach((im,i)=>{
+    const card=document.createElement('div'); card.className='field-card layer-card';
+    card.innerHTML=`
+      <div class="layer-head"><span>Logo/Gambar ${i+1}</span><button class="layer-del" data-i="${i}">✕</button></div>
+      <div class="layer-thumb"><img src="${im.src}"></div>
+      <div class="row2">
+        <label class="field"><span>Skala</span><input type="range" class="eimg-scale" data-i="${i}" min="0.1" max="2" step="0.05" value="${im.scale}"></label>
+        <label class="field"><span>Rotasi</span><input type="range" class="eimg-rot" data-i="${i}" min="-180" max="180" step="1" value="${im.rot}"></label>
+      </div>
+      <div class="row2">
+        <label class="field"><span>Posisi X</span><input type="range" class="eimg-x" data-i="${i}" min="0" max="100" step="1" value="${im.x}"></label>
+        <label class="field"><span>Posisi Y</span><input type="range" class="eimg-y" data-i="${i}" min="0" max="100" step="1" value="${im.y}"></label>
+      </div>`;
+    el.appendChild(card);
+  });
+  el.querySelectorAll('.layer-del').forEach(b=>{ b.onclick=()=>{ state.mock.extraImages.splice(parseInt(b.dataset.i),1); renderExtraImages(); renderStage(); }; });
+  el.querySelectorAll('.eimg-scale').forEach(inp=>{ inp.oninput=e=>{ state.mock.extraImages[parseInt(e.target.dataset.i)].scale=parseFloat(e.target.value); renderStage(); }; });
+  el.querySelectorAll('.eimg-rot').forEach(inp=>{ inp.oninput=e=>{ state.mock.extraImages[parseInt(e.target.dataset.i)].rot=parseFloat(e.target.value); renderStage(); }; });
+  el.querySelectorAll('.eimg-x').forEach(inp=>{ inp.oninput=e=>{ state.mock.extraImages[parseInt(e.target.dataset.i)].x=parseFloat(e.target.value); renderStage(); }; });
+  el.querySelectorAll('.eimg-y').forEach(inp=>{ inp.oninput=e=>{ state.mock.extraImages[parseInt(e.target.dataset.i)].y=parseFloat(e.target.value); renderStage(); }; });
+}
+
+/* ---------------- render: extra text layers ---------------- */
+function renderExtraTexts(){
+  const el=document.getElementById('extraTxtList'); el.innerHTML='';
+  state.mock.extraTexts.forEach((tx,i)=>{
+    const card=document.createElement('div'); card.className='field-card layer-card';
+    card.innerHTML=`
+      <div class="layer-head"><span>Teks ${i+1}</span><button class="layer-del" data-i="${i}">✕</button></div>
+      <label class="field"><span>Isi teks</span><input type="text" class="etxt-content" data-i="${i}" value="${(tx.text||'').replace(/"/g,'&quot;')}" placeholder="mis. Sertifikasi Halal"></label>
+      <div class="row2">
+        <label class="field"><span>Font</span>
+          <select class="etxt-font" data-i="${i}">
+            <option value="Space Grotesk" ${tx.font==='Space Grotesk'?'selected':''}>Space Grotesk</option>
+            <option value="Inter" ${tx.font==='Inter'?'selected':''}>Inter</option>
+            <option value="JetBrains Mono" ${tx.font==='JetBrains Mono'?'selected':''}>JetBrains Mono</option>
+          </select>
+        </label>
+        <label class="field"><span>Warna</span><input type="color" class="etxt-color" data-i="${i}" value="${tx.color}"></label>
+      </div>
+      <div class="row2">
+        <label class="field"><span>Ukuran</span><input type="range" class="etxt-size" data-i="${i}" min="8" max="36" step="1" value="${tx.size}"></label>
+        <label class="field"><span>Rotasi</span><input type="range" class="etxt-rot" data-i="${i}" min="-180" max="180" step="1" value="${tx.rot}"></label>
+      </div>
+      <div class="row2">
+        <label class="field"><span>Posisi X</span><input type="range" class="etxt-x" data-i="${i}" min="0" max="100" step="1" value="${tx.x}"></label>
+        <label class="field"><span>Posisi Y</span><input type="range" class="etxt-y" data-i="${i}" min="0" max="100" step="1" value="${tx.y}"></label>
+      </div>`;
+    el.appendChild(card);
+  });
+  el.querySelectorAll('.layer-del').forEach(b=>{ b.onclick=()=>{ state.mock.extraTexts.splice(parseInt(b.dataset.i),1); renderExtraTexts(); renderStage(); }; });
+  el.querySelectorAll('.etxt-content').forEach(inp=>{ inp.oninput=e=>{ state.mock.extraTexts[parseInt(e.target.dataset.i)].text=e.target.value; renderStage(); }; });
+  el.querySelectorAll('.etxt-font').forEach(inp=>{ inp.onchange=e=>{ state.mock.extraTexts[parseInt(e.target.dataset.i)].font=e.target.value; renderStage(); }; });
+  el.querySelectorAll('.etxt-color').forEach(inp=>{ inp.oninput=e=>{ state.mock.extraTexts[parseInt(e.target.dataset.i)].color=e.target.value; renderStage(); }; });
+  el.querySelectorAll('.etxt-size').forEach(inp=>{ inp.oninput=e=>{ state.mock.extraTexts[parseInt(e.target.dataset.i)].size=parseFloat(e.target.value); renderStage(); }; });
+  el.querySelectorAll('.etxt-rot').forEach(inp=>{ inp.oninput=e=>{ state.mock.extraTexts[parseInt(e.target.dataset.i)].rot=parseFloat(e.target.value); renderStage(); }; });
+  el.querySelectorAll('.etxt-x').forEach(inp=>{ inp.oninput=e=>{ state.mock.extraTexts[parseInt(e.target.dataset.i)].x=parseFloat(e.target.value); renderStage(); }; });
+  el.querySelectorAll('.etxt-y').forEach(inp=>{ inp.oninput=e=>{ state.mock.extraTexts[parseInt(e.target.dataset.i)].y=parseFloat(e.target.value); renderStage(); }; });
+}
+
+/* ---------------- render: scene (multi-item set) ---------------- */
+function renderSceneItemList(){
+  const el=document.getElementById('sceneItemList'); el.innerHTML='';
+  state.scene.items.forEach((item,i)=>{
+    const card=document.createElement('div'); card.className='field-card layer-card';
+    const shapeOptions = Object.entries(SHAPE_LABELS).map(([k,label])=>`<option value="${k}" ${item.shape===k?'selected':''}>${label}</option>`).join('');
+    const paletteChips = state.palette.map(hex=>`<span class="scene-color-chip${item.color===hex?' active':''}" data-i="${i}" data-hex="${hex}"><span class="dot" style="background:${hex};"></span></span>`).join('');
+    card.innerHTML = `
+      <div class="layer-head"><span>Item ${i+1}</span><button class="layer-del" data-i="${i}">✕</button></div>
+      <label class="field"><span>Bentuk</span><select class="scene-shape" data-i="${i}">${shapeOptions}</select></label>
+      <label class="field"><span>Warna dari palet</span>
+        <div class="chipgrid" style="margin-bottom:8px;">${paletteChips}</div>
+      </label>
+      <label class="field"><span>atau warna manual</span><input type="color" class="scene-color-manual" data-i="${i}" value="${item.color}"></label>`;
+    el.appendChild(card);
+  });
+  el.querySelectorAll('.layer-del').forEach(b=>{ b.onclick=()=>{ if(state.scene.items.length>1){ state.scene.items.splice(parseInt(b.dataset.i),1); renderSceneItemList(); renderSceneStage(); } }; });
+  el.querySelectorAll('.scene-shape').forEach(sel=>{ sel.onchange=e=>{ state.scene.items[parseInt(e.target.dataset.i)].shape=e.target.value; renderSceneStage(); }; });
+  el.querySelectorAll('.scene-color-chip').forEach(chip=>{ chip.onclick=()=>{ const i=parseInt(chip.dataset.i); state.scene.items[i].color=chip.dataset.hex; renderSceneItemList(); renderSceneStage(); }; });
+  el.querySelectorAll('.scene-color-manual').forEach(inp=>{ inp.oninput=e=>{ state.scene.items[parseInt(e.target.dataset.i)].color=e.target.value; renderSceneStage(); }; });
+}
+function renderSceneStage(){
+  const wrap=document.getElementById('sceneStage'); if(!wrap) return; wrap.innerHTML='';
+  const H=240;
+  state.scene.items.forEach(item=>{
+    const shape=SHAPES[item.shape]; if(!shape) return;
+    const vb=shape.viewBox.split(' ').map(Number); const vbW=vb[2], vbH=vb[3];
+    const W=H*(vbW/vbH);
+    const base=item.color, top=shadeColor(base,14), side=shadeColor(base,-16);
+    const div=document.createElement('div'); div.className='scene-item'; div.style.height=H+'px'; div.style.width=W+'px';
+    div.innerHTML=`<svg viewBox="${shape.viewBox}">
+      <defs>
+        ${glossDefsFor(state.mock.materialStyle)}
+        ${cylLightDefFor(state.mock.materialStyle)}
+        ${SHADOW_BLUR_FILTER}
+      </defs>
+      ${buildGroundShadow(vbW, vbH, shape.shadowY)}
+      ${shape.build(base,top,side)}
+      ${state.mock.windowEnabled && shape.windowZone ? buildWindowOverlay(shape.windowZone) : ''}
+    </svg>`;
+    if(state.scene.showLogo && state.mock.logo){
+      const zone=shape.zone;
+      const lz=document.createElement('div'); lz.className='scene-logo-zone';
+      lz.style.left=(zone.x/vbW*100)+'%'; lz.style.top=(zone.y/vbH*100)+'%';
+      lz.style.width=(zone.w/vbW*100)+'%'; lz.style.height=(zone.h/vbH*100)+'%';
+      const img=document.createElement('img'); img.src=state.mock.logo;
+      lz.appendChild(img);
+      div.appendChild(lz);
+    }
+    wrap.appendChild(div);
+  });
+  document.getElementById('sceneStageBg').style.background=SCENES[state.scene.scene];
+  document.getElementById('sceneCaption').textContent=state.scene.items.length+' ITEM DALAM SET';
+}
+
+/* ---------------- render: brief produk ---------------- */
+function renderBriefPersonalityControls(){
+  const el=document.getElementById('briefPersonalityControls'); el.innerHTML='';
+  PERSONALITY_PAIRS.forEach(pair=>{
+    const val=state.brief.personality[pair.key];
+    const wrap=document.createElement('label'); wrap.className='field';
+    wrap.innerHTML=`
+      <div style="display:flex;justify-content:space-between;font-size:11px;color:var(--muted);margin-bottom:4px;">
+        <span>${pair.left}</span><span>${pair.right}</span>
+      </div>
+      <input type="range" class="brief-slider" data-key="${pair.key}" min="1" max="5" step="1" value="${val}">`;
+    el.appendChild(wrap);
+  });
+  el.querySelectorAll('.brief-slider').forEach(inp=>{
+    inp.oninput=e=>{ state.brief.personality[e.target.dataset.key]=parseInt(e.target.value); renderBriefBoard(); };
+  });
+}
+function renderBriefLookfeelPicker(){
+  const el=document.getElementById('briefLookfeelPicker'); el.innerHTML='';
+  LOOKFEEL_TAGS.forEach(tag=>{
+    const c=document.createElement('div'); c.className='chip'+(state.brief.lookfeel.includes(tag)?' active':''); c.textContent=tag;
+    c.onclick=()=>{
+      const i=state.brief.lookfeel.indexOf(tag);
+      if(i>=0) state.brief.lookfeel.splice(i,1); else state.brief.lookfeel.push(tag);
+      renderBriefLookfeelPicker(); renderBriefBoard();
+    };
+    el.appendChild(c);
+  });
+}
+function renderBriefBoard(){
+  const b=state.brief;
+  document.getElementById('brief-subtitle').textContent = b.productName ? ('Brief untuk '+b.productName) : 'Nama produk belum diisi';
+
+  const pb=document.getElementById('brief-personality-board'); pb.innerHTML='';
+  PERSONALITY_PAIRS.forEach(pair=>{
+    const val=b.personality[pair.key];
+    const pct=((val-1)/4*100);
+    const row=document.createElement('div'); row.className='pbar-row';
+    row.innerHTML=`<div class="pbar-labels"><span>${pair.left}</span><span>${pair.right}</span></div>
+      <div class="pbar-track"><div class="pbar-dot" style="left:${pct}%;"></div></div>`;
+    pb.appendChild(row);
+  });
+
+  const lb=document.getElementById('brief-lookfeel-board'); lb.innerHTML='';
+  LOOKFEEL_TAGS.forEach(tag=>{
+    const span=document.createElement('span'); span.className='lf-pill'+(b.lookfeel.includes(tag)?' selected':''); span.textContent=tag;
+    lb.appendChild(span);
+  });
+
+  const cb=document.getElementById('brief-logocolor-board');
+  const swatches = state.palette.map(hex=>`<span class="brief-mini-swatch" style="background:${hex};" title="${hex}"></span>`).join('');
+  cb.innerHTML = `
+    <div class="brief-kv"><span class="k">Jenis Logo</span><span class="v">${b.jenisLogo}</span></div>
+    <div class="brief-kv"><span class="k">Bentuk Icon</span><span class="v">${b.bentukIcon}</span></div>
+    <div class="brief-kv"><span class="k">Font Utama / Alternatif</span><span class="v">${state.fontDisplay} / ${state.fontBody}</span></div>
+    <div style="padding-top:10px;">${swatches}</div>`;
+
+  const mb=document.getElementById('brief-market-board');
+  mb.innerHTML = `
+    <div class="brief-kv"><span class="k">Kelas Ekonomi</span><span class="v">${b.kelasEkonomi}</span></div>
+    <div class="brief-kv"><span class="k">Usia Target</span><span class="v">${b.usia}</span></div>
+    <div class="brief-kv"><span class="k">Karakter Foto</span><span class="v">${b.karakterFoto}</span></div>
+    <div class="brief-kv"><span class="k">Rasio Gambar</span><span class="v">${b.rasioGambar}</span></div>`;
+
+  const nb=document.getElementById('brief-notes-board');
+  nb.innerHTML = `
+    <div class="brief-kv"><span class="k">Gaya Caption</span><span class="v">${b.gayaCaption || '—'}</span></div>
+    <p style="font-size:12.5px;color:var(--ink);margin:10px 0 0;white-space:pre-wrap;">${b.catatan || '<span style="color:var(--muted)">Tidak ada catatan tambahan.</span>'}</p>`;
+}
+function renderBrief(){ renderBriefPersonalityControls(); renderBriefLookfeelPicker(); renderBriefBoard(); }
+
+function renderAll(){ renderMoodPresets(); renderBoard(); renderKwEditor(); renderColorFromPalette(); renderExtraImages(); renderExtraTexts(); renderStage(); renderSceneItemList(); renderSceneStage(); renderBrief(); }
+
+/* ---------------- nav ---------------- */
+document.querySelectorAll('.tabpill').forEach(btn=>{
+  btn.onclick=()=>{
+    document.querySelectorAll('.tabpill').forEach(b=>b.classList.remove('active'));
+    btn.classList.add('active'); activeView=btn.dataset.view;
+    document.getElementById('view-brief').classList.toggle('active', activeView==='brief');
+    document.getElementById('view-mood').classList.toggle('active', activeView==='mood');
+    document.getElementById('view-mock').classList.toggle('active', activeView==='mock');
+    document.getElementById('view-scene').classList.toggle('active', activeView==='scene');
+    if(activeView==='brief'){ renderBrief(); }
+    if(activeView==='mock'){ renderShapePicker(); renderColorFromPalette(); renderStage(); }
+    if(activeView==='scene'){ renderSceneItemList(); renderSceneStage(); }
+  };
+});
+
+/* ---------------- brief produk controls ---------------- */
+document.getElementById('briefProductName').addEventListener('input', e=>{ state.brief.productName=e.target.value; renderBriefBoard(); });
+document.getElementById('briefJenisLogo').addEventListener('change', e=>{ state.brief.jenisLogo=e.target.value; renderBriefBoard(); });
+document.getElementById('briefBentukIcon').addEventListener('change', e=>{ state.brief.bentukIcon=e.target.value; renderBriefBoard(); });
+document.getElementById('briefKelasEkonomi').addEventListener('change', e=>{ state.brief.kelasEkonomi=e.target.value; renderBriefBoard(); });
+document.getElementById('briefUsia').addEventListener('change', e=>{ state.brief.usia=e.target.value; renderBriefBoard(); });
+document.getElementById('briefKarakterFoto').addEventListener('change', e=>{ state.brief.karakterFoto=e.target.value; renderBriefBoard(); });
+document.getElementById('briefRasioGambar').addEventListener('change', e=>{ state.brief.rasioGambar=e.target.value; renderBriefBoard(); });
+document.getElementById('briefGayaCaption').addEventListener('input', e=>{ state.brief.gayaCaption=e.target.value; renderBriefBoard(); });
+document.getElementById('briefCatatan').addEventListener('input', e=>{ state.brief.catatan=e.target.value; renderBriefBoard(); });
+
+/* ---------------- moodboard controls ---------------- */
+document.getElementById('applyCustomPalette').onclick=()=>{
+  const seed=document.getElementById('seedColor').value;
+  const scheme=document.querySelector('#schemeButtons .chip.active')?.dataset.scheme||'analog';
+  state.palette=generatePalette(seed,scheme); state.mock.color=state.palette[3]; renderAll();
+};
+document.querySelectorAll('#schemeButtons .chip').forEach(c=>{ c.onclick=()=>{ document.querySelectorAll('#schemeButtons .chip').forEach(x=>x.classList.remove('active')); c.classList.add('active'); }; });
+document.getElementById('refUploadBtn').onclick=(e)=>{ if(e.target.tagName!=='INPUT') document.getElementById('refUpload').click(); };
+document.getElementById('refUpload').addEventListener('change', e=>{
+  [...e.target.files].forEach(file=>{ const reader=new FileReader(); reader.onload=ev=>{ state.refImages.push(ev.target.result); renderBoard(); }; reader.readAsDataURL(file); });
+});
+
+/* ---------------- mockup controls ---------------- */
+document.getElementById('mockColor').addEventListener('input', e=>{ state.mock.color=e.target.value; renderColorFromPalette(); renderStage(); });
+document.getElementById('sceneSelect').addEventListener('change', e=>{ state.mock.scene=e.target.value; renderStage(); });
+document.getElementById('textureSelect').addEventListener('change', e=>{ state.mock.texture=e.target.value; renderStage(); });
+document.getElementById('textureOpacity').addEventListener('input', e=>{ state.mock.textureOpacity=parseFloat(e.target.value); renderStage(); });
+document.getElementById('materialStyleSelect').addEventListener('change', e=>{ state.mock.materialStyle=e.target.value; renderStage(); renderSceneStage(); });
+document.getElementById('windowEnabled').addEventListener('change', e=>{ state.mock.windowEnabled=e.target.checked; renderStage(); renderSceneStage(); });
+document.getElementById('addExtraImgBtn').onclick=(e)=>{ if(e.target.tagName!=='INPUT') document.getElementById('addExtraImgUpload').click(); };
+document.getElementById('addExtraImgUpload').addEventListener('change', e=>{
+  [...e.target.files].forEach(file=>{
+    const reader=new FileReader();
+    reader.onload=ev=>{ state.mock.extraImages.push({id:Date.now()+Math.random(), src:ev.target.result, x:50, y:50, scale:0.5, rot:0}); renderExtraImages(); renderStage(); };
+    reader.readAsDataURL(file);
+  });
+  e.target.value='';
+});
+document.getElementById('addExtraTxtBtn').onclick=()=>{
+  state.mock.extraTexts.push({id:Date.now()+Math.random(), text:'Teks baru', font:'Space Grotesk', size:14, color:'#18181a', x:50, y:80, rot:0});
+  renderExtraTexts(); renderStage();
+};
+document.getElementById('logoUploadBtn').onclick=(e)=>{ if(e.target.tagName!=='INPUT') document.getElementById('logoUpload').click(); };
+document.getElementById('logoUpload').addEventListener('change', e=>{
+  const file=e.target.files[0]; if(!file) return;
+  const reader=new FileReader(); reader.onload=ev=>{ state.mock.logo=ev.target.result; renderStage(); }; reader.readAsDataURL(file);
+});
+[['logoScale','logoScale'],['logoX','logoX'],['logoY','logoY'],['logoRot','logoRot'],['textY','textY'],['textSize','textSize']].forEach(([id,key])=>{
+  document.getElementById(id).addEventListener('input', e=>{ state.mock[key]=parseFloat(e.target.value); renderStage(); });
+});
+document.getElementById('prodName').addEventListener('input', e=>{ state.mock.prodName=e.target.value; renderStage(); });
+document.getElementById('prodTag').addEventListener('input', e=>{ state.mock.prodTag=e.target.value; renderStage(); });
+document.getElementById('textFont').addEventListener('change', e=>{ state.mock.textFont=e.target.value; renderStage(); });
+document.getElementById('textColor').addEventListener('input', e=>{ state.mock.textColor=e.target.value; renderStage(); });
+document.getElementById('resetMock').onclick=()=>{
+  state.mock={shape:'box',color:state.palette[3],scene:'studio-light',logo:null,logoScale:0.8,logoX:0,logoY:-10,logoRot:0,prodName:'',prodTag:'',textFont:'Space Grotesk',textColor:'#18181a',textSize:15,textY:35,
+    texture:'none',textureOpacity:0.35,materialStyle:'glossy',windowEnabled:false,extraImages:[],extraTexts:[]};
+  document.getElementById('mockColor').value=state.mock.color;
+  document.getElementById('logoScale').value=0.8; document.getElementById('logoX').value=0; document.getElementById('logoY').value=-10; document.getElementById('logoRot').value=0;
+  document.getElementById('prodName').value=''; document.getElementById('prodTag').value='';
+  document.getElementById('textFont').value='Space Grotesk'; document.getElementById('textColor').value='#18181a';
+  document.getElementById('textSize').value=15; document.getElementById('textY').value=35;
+  document.getElementById('textureSelect').value='none'; document.getElementById('textureOpacity').value=0.35;
+  document.getElementById('materialStyleSelect').value='glossy'; document.getElementById('windowEnabled').checked=false;
+  renderShapePicker(); renderColorFromPalette(); renderExtraImages(); renderExtraTexts(); renderStage();
+};
+
+/* ---------------- scene (multi-item set) controls ---------------- */
+document.getElementById('addSceneItemBtn').onclick=()=>{
+  if(state.scene.items.length>=6) return;
+  const shapeKeys=Object.keys(SHAPE_LABELS);
+  const nextShape=shapeKeys[state.scene.items.length % shapeKeys.length];
+  const nextColor=state.palette[state.scene.items.length % state.palette.length];
+  state.scene.items.push({id:Date.now()+Math.random(), shape:nextShape, color:nextColor});
+  renderSceneItemList(); renderSceneStage();
+};
+document.getElementById('sceneBgSelect').addEventListener('change', e=>{ state.scene.scene=e.target.value; renderSceneStage(); });
+document.getElementById('sceneShowLogo').addEventListener('change', e=>{ state.scene.showLogo=e.target.checked; renderSceneStage(); });
+document.getElementById('resetScene').onclick=()=>{
+  state.scene={ items:[
+    {id:1, shape:'box', color:state.palette[0]},
+    {id:2, shape:'pouch', color:state.palette[1]},
+    {id:3, shape:'zipperpouch', color:state.palette[3]}
+  ], showLogo:true, scene:'studio-light' };
+  document.getElementById('sceneBgSelect').value='studio-light';
+  document.getElementById('sceneShowLogo').checked=true;
+  renderSceneItemList(); renderSceneStage();
+};
+
+/* ---------------- export & save ---------------- */
+document.getElementById('topExport').onclick=()=>{
+  if(activeView==='brief'){
+    html2canvas(document.getElementById('briefBoard'), {backgroundColor:'#ffffff', scale:2}).then(canvas=>{
+      const link=document.createElement('a'); link.download=PROJECT_SLUG+'-Brief.png'; link.href=canvas.toDataURL('image/png'); link.click();
+    });
+  } else if(activeView==='mood'){
+    html2canvas(document.getElementById('moodBoard'), {backgroundColor:'#ffffff', scale:2}).then(canvas=>{
+      const link=document.createElement('a'); link.download=PROJECT_SLUG+'-Moodboard.png'; link.href=canvas.toDataURL('image/png'); link.click();
+    });
+  } else if(activeView==='scene'){
+    html2canvas(document.getElementById('sceneStageBg'), {backgroundColor:null, scale:2}).then(canvas=>{
+      const link=document.createElement('a'); link.download=PROJECT_SLUG+'-SetKemasan.png'; link.href=canvas.toDataURL('image/png'); link.click();
+    });
+  } else {
+    html2canvas(document.getElementById('stageBg'), {backgroundColor:null, scale:2}).then(canvas=>{
+      const link=document.createElement('a'); link.download=PROJECT_SLUG+'-MockupKemasan-'+state.mock.shape+'.png'; link.href=canvas.toDataURL('image/png'); link.click();
+    });
+  }
+};
+/* ---------------- export: full client guideline PDF (brief + moodboard + mockup + set) ---------------- */
+async function captureBoardForPdf(viewName, elementId, bgColor){
+  document.querySelectorAll('.tabpill').forEach(b=>b.classList.toggle('active', b.dataset.view===viewName));
+  document.getElementById('view-brief').classList.toggle('active', viewName==='brief');
+  document.getElementById('view-mood').classList.toggle('active', viewName==='mood');
+  document.getElementById('view-mock').classList.toggle('active', viewName==='mock');
+  document.getElementById('view-scene').classList.toggle('active', viewName==='scene');
+  activeView=viewName;
+  if(viewName==='brief') renderBrief();
+  if(viewName==='mood') renderBoard();
+  if(viewName==='mock'){ renderShapePicker(); renderColorFromPalette(); renderStage(); }
+  if(viewName==='scene'){ renderSceneItemList(); renderSceneStage(); }
+  await new Promise(r=>setTimeout(r, 150)); // beri waktu layout & font settle sebelum di-capture
+  return html2canvas(document.getElementById(elementId), {backgroundColor:bgColor, scale:2});
+}
+async function exportFullGuidelinePDF(){
+  const btn=document.getElementById('exportGuidelineBtn'); const oldText=btn.textContent;
+  if(typeof html2canvas==='undefined' || typeof window.jspdf==='undefined'){
+    alert('Library pembuat PDF (html2canvas/jsPDF) belum termuat dari CDN — biasanya karena sandbox/preview ini memblokir akses ke cdnjs.cloudflare.com. Coba unduh file HTML ini lalu buka di tab browser biasa (bukan di dalam jendela preview/chat), pastikan juga koneksi internet aktif di browser tersebut.');
+    return;
+  }
+  btn.textContent='Menyiapkan PDF...'; btn.disabled=true;
+  const originalView=activeView;
+  try{
+    const briefCanvas = await captureBoardForPdf('brief','briefBoard','#ffffff');
+    const moodCanvas = await captureBoardForPdf('mood','moodBoard','#ffffff');
+    const mockCanvas = await captureBoardForPdf('mock','stageBg', null);
+    const sceneCanvas = await captureBoardForPdf('scene','sceneStageBg', null);
+
+    // kembalikan tampilan ke tab semula
+    document.querySelectorAll('.tabpill').forEach(b=>b.classList.toggle('active', b.dataset.view===originalView));
+    document.getElementById('view-brief').classList.toggle('active', originalView==='brief');
+    document.getElementById('view-mood').classList.toggle('active', originalView==='mood');
+    document.getElementById('view-mock').classList.toggle('active', originalView==='mock');
+    document.getElementById('view-scene').classList.toggle('active', originalView==='scene');
+    activeView=originalView;
+    if(originalView==='mock'){ renderShapePicker(); renderColorFromPalette(); renderStage(); }
+    if(originalView==='scene'){ renderSceneItemList(); renderSceneStage(); }
+    if(originalView==='brief'){ renderBrief(); }
+    if(originalView==='mood'){ renderBoard(); }
+
+    const { jsPDF } = window.jspdf;
+    const pdf = new jsPDF({unit:'pt', format:'a4'});
+    const pageW = pdf.internal.pageSize.getWidth();
+    const pageH = pdf.internal.pageSize.getHeight();
+    const margin = 40;
+
+    function addImagePage(canvas, title){
+      pdf.setFont('helvetica','bold'); pdf.setFontSize(14); pdf.setTextColor(20,20,20);
+      pdf.text(title, margin, margin);
+      pdf.setDrawColor(227,30,43); pdf.setLineWidth(2);
+      pdf.line(margin, margin+8, margin+34, margin+8);
+      const maxW = pageW - margin*2;
+      const maxH = pageH - margin*2 - 30;
+      const ratio = Math.min(maxW/canvas.width, maxH/canvas.height);
+      const w = canvas.width*ratio, h = canvas.height*ratio;
+      const x = (pageW-w)/2;
+      pdf.addImage(canvas.toDataURL('image/png'), 'PNG', x, margin+26, w, h);
+      pdf.setFontSize(8); pdf.setTextColor(140,140,140);
+      pdf.text(PDF_FOOTER_TEXT, margin, pageH-20);
+      pdf.text(new Date().toLocaleDateString('id-ID',{day:'numeric',month:'long',year:'numeric'}), pageW-margin, pageH-20, {align:'right'});
+    }
+
+    // halaman sampul
+    pdf.setFillColor(13,13,13); pdf.rect(0,0,pageW,pageH,'F');
+    pdf.setTextColor(255,255,255); pdf.setFont('helvetica','bold'); pdf.setFontSize(26);
+    pdf.text('VISUAL IDENTITY', pageW/2, pageH/2-40, {align:'center'});
+    pdf.text('& PACKAGING GUIDELINE', pageW/2, pageH/2-12, {align:'center'});
+    pdf.setFont('helvetica','normal'); pdf.setFontSize(15);
+    pdf.text(state.brief.productName || 'Nama Produk Belum Diisi', pageW/2, pageH/2+28, {align:'center'});
+    pdf.setFontSize(10); pdf.setTextColor(180,180,180);
+    pdf.text('Disusun oleh obeecreatives · '+new Date().toLocaleDateString('id-ID',{day:'numeric',month:'long',year:'numeric'}), pageW/2, pageH/2+54, {align:'center'});
+    pdf.setFontSize(8); pdf.setTextColor(140,140,140);
+    pdf.text(PDF_FOOTER_TEXT, pageW/2, pageH-30, {align:'center'});
+
+    pdf.addPage(); addImagePage(briefCanvas, 'Brief Visual Identity');
+    pdf.addPage(); addImagePage(moodCanvas, 'Moodboard');
+    pdf.addPage(); addImagePage(mockCanvas, 'Mockup Kemasan');
+    pdf.addPage(); addImagePage(sceneCanvas, 'Set Kemasan (Product Lineup)');
+
+    const fname=PROJECT_SLUG+'-Guideline-'+(state.brief.productName||'produk').toLowerCase().trim().replace(/[^a-z0-9]+/g,'-').replace(/(^-|-$)/g,'')+'.pdf';
+    // Unduh manual via blob + <a download> (pola sama seperti tombol "Unduh PNG"),
+    // dilebih diandalkan daripada pdf.save() bawaan yang di beberapa sandbox/preview
+    // dengan Content-Security-Policy ketat bisa terblokir saat mencoba memicu unduhan.
+    const blob = pdf.output('blob');
+    const blobUrl = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = blobUrl; link.download = fname;
+    document.body.appendChild(link); link.click(); document.body.removeChild(link);
+    setTimeout(()=>URL.revokeObjectURL(blobUrl), 4000);
+    btn.textContent='Terunduh ✓';
+  }catch(err){
+    console.error('Gagal membuat PDF panduan', err);
+    btn.textContent='Gagal, coba lagi';
+    alert('Gagal membuat PDF panduan. Jika ini terjadi di dalam preview chat, coba unduh file HTML ini lalu buka di tab browser biasa (bukan di dalam jendela preview/chat) — beberapa sandbox preview memblokir mekanisme unduhan library eksternal.');
+  }finally{
+    setTimeout(()=>{ btn.textContent=oldText; btn.disabled=false; }, 1800);
+  }
+}
+document.getElementById('exportGuidelineBtn').onclick=exportFullGuidelinePDF;
+
+/* ---------------- integrasi Google Sheets & Apps Script (opsional) ---------------- */
+// HAS_GAS = true kalau halaman ini sedang dibuka lewat Web App URL Apps Script
+// (di-serve oleh doGet via HtmlService) -> google.script.run tersedia otomatis,
+// tidak perlu URL manual sama sekali. Kalau file ini dibuka standalone (file://
+// atau di-host di tempat lain), HAS_GAS = false -> fallback ke fetch() + URL manual.
+const HAS_GAS = (typeof google !== 'undefined') && !!(google.script && google.script.run);
+
+function callAppsScript(fnName, payload){
+  return new Promise((resolve, reject)=>{
+    google.script.run
+      .withSuccessHandler(resolve)
+      .withFailureHandler(err=>reject(err instanceof Error ? err : new Error((err && err.message) || String(err))))
+      [fnName](payload);
+  });
+}
+function base64ToBlob(base64, mime){
+  const byteChars = atob(base64);
+  const byteNumbers = new Array(byteChars.length);
+  for(let i=0;i<byteChars.length;i++) byteNumbers[i]=byteChars.charCodeAt(i);
+  return new Blob([new Uint8Array(byteNumbers)], {type: mime});
+}
+function briefPayloadForSheets(){
+  return {
+    productName: state.brief.productName,
+    personality: state.brief.personality,
+    lookfeel: state.brief.lookfeel,
+    jenisLogo: state.brief.jenisLogo,
+    bentukIcon: state.brief.bentukIcon,
+    kelasEkonomi: state.brief.kelasEkonomi,
+    usia: state.brief.usia,
+    karakterFoto: state.brief.karakterFoto,
+    rasioGambar: state.brief.rasioGambar,
+    gayaCaption: state.brief.gayaCaption,
+    catatan: state.brief.catatan,
+    palette: state.palette,
+    fontDisplay: state.fontDisplay,
+    fontBody: state.fontBody
+  };
+}
+async function gasArchive(){
+  const statusEl=document.getElementById('gasStatus');
+  statusEl.textContent='Mengirim ke Google Sheets...';
+  try{
+    if(HAS_GAS){
+      const result=await callAppsScript('gasArchiveBrief', briefPayloadForSheets());
+      statusEl.textContent='Terkirim ✓ — baris ke-'+result.row+' di Google Sheets.';
+      return;
+    }
+    const url=document.getElementById('gasWebAppUrl').value.trim();
+    if(!url){ statusEl.textContent='Isi URL Web App Apps Script dulu.'; return; }
+    // mode:'no-cors' dipakai karena kita tidak perlu baca balasannya, cukup kirim data.
+    // Ini menghindari isu CORS preflight yang umum terjadi pada Apps Script Web App.
+    await fetch(url, {method:'POST', mode:'no-cors', headers:{'Content-Type':'text/plain;charset=utf-8'}, body: JSON.stringify({action:'archiveBrief', data:briefPayloadForSheets()})});
+    statusEl.textContent='Terkirim ✓ — cek Google Sheets untuk konfirmasi (mode pengiriman ini tidak bisa membaca balasan server).';
+  }catch(err){
+    console.error('gasArchive gagal', err);
+    statusEl.textContent='Gagal mengirim: '+(err.message||err);
+  }
+}
+async function gasExportPdf(){
+  const statusEl=document.getElementById('gasStatus');
+  const btn=document.getElementById('gasPdfBtn'); const oldText=btn.textContent;
+  const url=document.getElementById('gasWebAppUrl').value.trim();
+  if(!HAS_GAS && !url){ statusEl.textContent='Isi URL Web App Apps Script dulu.'; return; }
+  btn.disabled=true; btn.textContent='Menyiapkan...';
+  const originalView=activeView;
+  try{
+    let mockupImg=null, sceneImg=null;
+    if(typeof html2canvas!=='undefined'){
+      statusEl.textContent='Menangkap gambar mockup & set kemasan...';
+      const mockCanvas=await captureBoardForPdf('mock','stageBg', null);
+      mockupImg=mockCanvas.toDataURL('image/png');
+      const sceneCanvas=await captureBoardForPdf('scene','sceneStageBg', null);
+      sceneImg=sceneCanvas.toDataURL('image/png');
+    } else {
+      statusEl.textContent='html2canvas tidak termuat — PDF dibuat tanpa gambar mockup.';
+    }
+    // kembalikan tampilan ke tab semula
+    document.querySelectorAll('.tabpill').forEach(b=>b.classList.toggle('active', b.dataset.view===originalView));
+    document.getElementById('view-brief').classList.toggle('active', originalView==='brief');
+    document.getElementById('view-mood').classList.toggle('active', originalView==='mood');
+    document.getElementById('view-mock').classList.toggle('active', originalView==='mock');
+    document.getElementById('view-scene').classList.toggle('active', originalView==='scene');
+    activeView=originalView;
+    if(originalView==='brief') renderBrief();
+    if(originalView==='mood') renderBoard();
+    if(originalView==='mock'){ renderShapePicker(); renderColorFromPalette(); renderStage(); }
+    if(originalView==='scene'){ renderSceneItemList(); renderSceneStage(); }
+
+    statusEl.textContent='Membuat guideline di Google Slides & mengekspor PDF...';
+    const payload={
+      brief: state.brief, palette: state.palette, fontDisplay: state.fontDisplay,
+      fontBody: state.fontBody, keywords: state.keywords,
+      mockupImageBase64: mockupImg, sceneImageBase64: sceneImg
+    };
+    let result;
+    if(HAS_GAS){
+      result=await callAppsScript('gasGeneratePdf', payload);
+    } else {
+      const res=await fetch(url, {method:'POST', headers:{'Content-Type':'text/plain;charset=utf-8'}, body: JSON.stringify({action:'generatePdf', data:payload})});
+      const json=await res.json();
+      if(!json.ok) throw new Error(json.error||'Apps Script mengembalikan error tidak diketahui');
+      result=json.result;
+    }
+    const blob=base64ToBlob(result.pdfBase64, 'application/pdf');
+    const blobUrl=URL.createObjectURL(blob);
+    const link=document.createElement('a'); link.href=blobUrl; link.download=result.fileName||'guideline.pdf';
+    document.body.appendChild(link); link.click(); document.body.removeChild(link);
+    setTimeout(()=>URL.revokeObjectURL(blobUrl), 4000);
+    statusEl.innerHTML='PDF terunduh ✓ — <a href="'+result.slidesUrl+'" target="_blank" rel="noopener">buka versi Slides (bisa diedit)</a>';
+  }catch(err){
+    console.error('gasExportPdf gagal', err);
+    statusEl.textContent='Gagal: '+(err.message||err)+(HAS_GAS?'':' — cek URL Web App, deploy ulang bila perlu.');
+  }finally{
+    btn.disabled=false; btn.textContent=oldText;
+  }
+}
+document.getElementById('gasArchiveBtn').onclick=gasArchive;
+document.getElementById('gasPdfBtn').onclick=gasExportPdf;
+document.getElementById('gasWebAppUrl').addEventListener('input', e=>{
+  try{ localStorage.setItem('obee-packaging:gas-url', e.target.value); }catch(err){}
+});
+if(HAS_GAS){
+  document.getElementById('gasAutoConnected').style.display='block';
+  document.getElementById('gasUrlField').style.display='none';
+  document.getElementById('gasSetupHint').style.display='none';
+}
+
+document.getElementById('saveBtn').onclick=async ()=>{
+  const toSave={mood:state.mood,palette:state.palette,fontDisplay:state.fontDisplay,fontBody:state.fontBody,keywords:state.keywords,
+    mock:{...state.mock, logo:null, extraImages:[]}, scene:state.scene, brief:state.brief}; // gambar (logo utama & tambahan) tidak disimpan, hanya pengaturan teks/warna/tekstur
+  await sSet('obee-packaging:autosave', toSave);
+  const btn=document.getElementById('saveBtn'); const old=btn.textContent; btn.textContent='Tersimpan ✓';
+  setTimeout(()=>btn.textContent=old, 1500);
+};
+
+/* ---------------- init ---------------- */
+async function init(){
+  const saved=await sGet('obee-packaging:autosave');
+  if(saved){
+    state.mood=saved.mood; state.palette=saved.palette; state.fontDisplay=saved.fontDisplay;
+    state.fontBody=saved.fontBody; state.keywords=saved.keywords;
+    state.mock={...state.mock, ...saved.mock, logo:null, extraImages:[], extraTexts:saved.mock.extraTexts||[]};
+    if(saved.scene){ state.scene=saved.scene; }
+    if(saved.brief){ state.brief={...state.brief, ...saved.brief, personality:{...state.brief.personality, ...(saved.brief.personality||{})}}; }
+    document.getElementById('mockColor').value=state.mock.color;
+    document.getElementById('prodName').value=state.mock.prodName;
+    document.getElementById('prodTag').value=state.mock.prodTag;
+    document.getElementById('textFont').value=state.mock.textFont;
+    document.getElementById('textColor').value=state.mock.textColor;
+    document.getElementById('textSize').value=state.mock.textSize;
+    document.getElementById('textY').value=state.mock.textY;
+    document.getElementById('logoScale').value=state.mock.logoScale;
+    document.getElementById('logoX').value=state.mock.logoX;
+    document.getElementById('logoY').value=state.mock.logoY;
+    document.getElementById('logoRot').value=state.mock.logoRot;
+    document.getElementById('textureSelect').value=state.mock.texture||'none';
+    document.getElementById('textureOpacity').value=state.mock.textureOpacity!=null?state.mock.textureOpacity:0.35;
+    document.getElementById('materialStyleSelect').value=state.mock.materialStyle||'glossy';
+    document.getElementById('windowEnabled').checked=!!state.mock.windowEnabled;
+    document.getElementById('sceneBgSelect').value=state.scene.scene||'studio-light';
+    document.getElementById('sceneShowLogo').checked=state.scene.showLogo!==false;
+    document.getElementById('briefProductName').value=state.brief.productName||'';
+    document.getElementById('briefJenisLogo').value=state.brief.jenisLogo;
+    document.getElementById('briefBentukIcon').value=state.brief.bentukIcon;
+    document.getElementById('briefKelasEkonomi').value=state.brief.kelasEkonomi;
+    document.getElementById('briefUsia').value=state.brief.usia;
+    document.getElementById('briefKarakterFoto').value=state.brief.karakterFoto;
+    document.getElementById('briefRasioGambar').value=state.brief.rasioGambar;
+    document.getElementById('briefGayaCaption').value=state.brief.gayaCaption||'';
+    document.getElementById('briefCatatan').value=state.brief.catatan||'';
+  }
+  try{
+    const savedGasUrl=localStorage.getItem('obee-packaging:gas-url');
+    if(savedGasUrl) document.getElementById('gasWebAppUrl').value=savedGasUrl;
+  }catch(e){}
+  document.querySelector('#schemeButtons .chip[data-scheme="analog"]').classList.add('active');
+  renderAll();
+}
+/* ---------------- footer & modal bantuan ---------------- */
+document.getElementById('mainFooter').textContent = FOOTER_TEXT;
+document.getElementById('helpProjectName').textContent = PROJECT_NAME;
+document.getElementById('helpProjectVersion').textContent = 'Versi ' + PROJECT_VERSION;
+document.getElementById('helpFooterText').textContent = FOOTER_TEXT;
+document.getElementById('helpBtn').onclick = () => document.getElementById('helpModal').classList.add('open');
+document.getElementById('helpModalClose').onclick = () => document.getElementById('helpModal').classList.remove('open');
+document.getElementById('helpModal').addEventListener('click', e => { if (e.target.id === 'helpModal') document.getElementById('helpModal').classList.remove('open'); });
+document.addEventListener('keydown', e => { if (e.key === 'Escape') document.getElementById('helpModal').classList.remove('open'); });
+
+init();
+</script>
+</body>
+</html>

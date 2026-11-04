@@ -1,0 +1,34 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <title>Logo & Packaging Toolkit</title>
+  <style>
+    html, body { margin:0; padding:0; height:100%; overflow:hidden; background:#0d0d0d; }
+    iframe { border:0; width:100%; height:100vh; height:100dvh; display:block; }
+  </style>
+</head>
+<body>
+  <iframe id="app" allow="clipboard-write"
+    src="https://script.google.com/macros/s/AKfycbwhBE35-vDQUtzgljrmW6b5D6xuOg1VSHILh5xreGJ18gx3ysPEDqnm4K38zWi783ZeSw/exec"></iframe>
+  <script>
+    var iframe = document.getElementById('app');
+
+    // Samakan tinggi iframe dengan tinggi layar yang BENAR-BENAR terlihat di HP.
+    // 100vh/100dvh saja kadang masih meleset di sebagian browser HP saat address
+    // bar menyembul/menyusut ketika scroll -- ini bikin bagian bawah halaman
+    // (mis. footer atau tombol) ketutup. window.visualViewport lebih akurat.
+    function setIframeHeight(){
+      var h = window.visualViewport ? window.visualViewport.height : window.innerHeight;
+      iframe.style.height = h + 'px';
+    }
+    setIframeHeight();
+    if (window.visualViewport) {
+      window.visualViewport.addEventListener('resize', setIframeHeight);
+    } else {
+      window.addEventListener('resize', setIframeHeight);
+    }
+  </script>
+</body>
+</html>
