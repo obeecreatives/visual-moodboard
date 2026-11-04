@@ -55,27 +55,28 @@ export const OfficialDesignBriefSheet: React.FC<OfficialDesignBriefSheetProps> =
       <div className="w-full max-w-5xl bg-slate-900 rounded-3xl border border-slate-700 shadow-2xl overflow-hidden my-auto print:border-none print:shadow-none print:rounded-none print:bg-white print:max-w-none">
         
         {/* Modal Top Bar (Hidden when printed) */}
-        <div className="flex items-center justify-between px-6 py-4 bg-slate-950 border-b border-slate-800 print:hidden">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between px-4 py-3 sm:px-6 sm:py-4 bg-slate-950 border-b border-slate-800 gap-3 print:hidden">
           <div className="flex items-center gap-2">
-            <span className="px-2 py-0.5 rounded bg-blue-600 text-white text-[10px] font-bold uppercase tracking-wider">
-              Template Resmi 2 Halaman
+            <span className="px-2 py-0.5 rounded bg-blue-600 text-white text-[10px] font-bold uppercase tracking-wider shrink-0">
+              Format Resmi 2 Hal
             </span>
-            <h3 className="text-sm font-bold text-white">
-              Preview Dokumen: Design Brief & Visual Desain Kemasan
+            <h3 className="text-xs sm:text-sm font-bold text-white truncate">
+              Preview: Design Brief &amp; Visual Desain Kemasan
             </h3>
           </div>
 
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-2 justify-end">
             <button
               onClick={handlePrint}
-              className="flex items-center gap-1.5 px-4 py-2 rounded-xl text-xs font-semibold bg-blue-600 hover:bg-blue-700 text-white transition-colors shadow-sm"
+              className="flex items-center gap-1.5 px-3 sm:px-4 py-2 rounded-xl text-xs font-semibold bg-blue-600 hover:bg-blue-700 text-white transition-colors shadow-sm"
             >
-              <Printer className="w-4 h-4" />
-              <span>Cetak / Simpan PDF (2 Halaman)</span>
+              <Printer className="w-4 h-4 shrink-0" />
+              <span>Cetak / Simpan PDF</span>
             </button>
             <button
               onClick={onClose}
-              className="p-1.5 text-slate-400 hover:text-white rounded-lg hover:bg-slate-800"
+              className="p-1.5 text-slate-400 hover:text-white rounded-lg hover:bg-slate-800 transition"
+              aria-label="Tutup Preview"
             >
               <X className="w-5 h-5" />
             </button>
@@ -83,16 +84,23 @@ export const OfficialDesignBriefSheet: React.FC<OfficialDesignBriefSheetProps> =
         </div>
 
         {/* Scrollable Document Container */}
-        <div className="p-4 sm:p-8 space-y-12 max-h-[85vh] overflow-y-auto print:max-h-none print:overflow-visible print:p-0 print:space-y-0">
+        <div className="p-2 sm:p-6 md:p-8 space-y-8 max-h-[85vh] overflow-y-auto print:max-h-none print:overflow-visible print:p-0 print:space-y-0">
           
+          {/* Mobile swipe hint banner */}
+          <div className="md:hidden flex items-center gap-2 p-2.5 rounded-xl bg-blue-950/60 border border-blue-500/30 text-blue-300 text-[11px] leading-tight">
+            <span>💡</span>
+            <span>Mode Layar Kecil: Geser ke samping (swipe) untuk memeriksa detail formulir standar 2 halaman tanpa terpotong.</span>
+          </div>
+
           {/* ========================================================= */}
           {/* HALAMAN 1: DESIGN BRIEF - DESAIN KEMASAN                 */}
           {/* ========================================================= */}
-          <div 
-            id="official-brief-page-1"
-            className="w-full aspect-[1.414/1] bg-[#eef2f6] text-[#0f172a] p-8 sm:p-12 flex flex-col justify-between shadow-xl rounded-xl border border-slate-300 print:shadow-none print:rounded-none print:border-none print:aspect-auto print:min-h-screen print:page-break-after"
-            style={{ fontFamily: 'Inter, system-ui, sans-serif' }}
-          >
+          <div className="w-full overflow-x-auto pb-2 print:overflow-visible">
+            <div 
+              id="official-brief-page-1"
+              className="min-w-[680px] md:min-w-0 w-full aspect-[1.414/1] bg-[#eef2f6] text-[#0f172a] p-6 sm:p-10 md:p-12 flex flex-col justify-between shadow-xl rounded-xl border border-slate-300 print:shadow-none print:rounded-none print:border-none print:aspect-auto print:min-h-screen print:page-break-after"
+              style={{ fontFamily: 'Inter, system-ui, sans-serif' }}
+            >
             {/* Top Bar Section */}
             <div className="flex items-start justify-between gap-6 pb-6 border-b border-slate-300">
               {/* Talenta & Mentor Block */}
@@ -156,21 +164,23 @@ export const OfficialDesignBriefSheet: React.FC<OfficialDesignBriefSheetProps> =
               ))}
             </div>
 
-            {/* Bottom Brand Stamp */}
-            <div className="pt-4 border-t border-slate-300 flex items-center justify-between text-[10px] text-slate-500">
-              <span className="font-mono">FORM-REF: {brief.briefNumber} · HALAMAN 1 DARI 2</span>
-              <span>obeecreatives — Packaging OS</span>
+              {/* Bottom Brand Stamp */}
+              <div className="pt-4 border-t border-slate-300 flex items-center justify-between text-[10px] text-slate-500">
+                <span className="font-mono">FORM-REF: {brief.briefNumber} · HALAMAN 1 DARI 2</span>
+                <span>obeecreatives — Packaging OS</span>
+              </div>
             </div>
           </div>
 
           {/* ========================================================= */}
           {/* HALAMAN 2: VISUAL DESAIN - DESAIN KEMASAN                 */}
           {/* ========================================================= */}
-          <div 
-            id="official-brief-page-2"
-            className="w-full aspect-[1.414/1] bg-[#eef2f6] text-[#0f172a] p-8 sm:p-12 flex flex-col justify-between shadow-xl rounded-xl border border-slate-300 print:shadow-none print:rounded-none print:border-none print:aspect-auto print:min-h-screen print:page-break-before"
-            style={{ fontFamily: 'Inter, system-ui, sans-serif' }}
-          >
+          <div className="w-full overflow-x-auto pb-2 print:overflow-visible">
+            <div 
+              id="official-brief-page-2"
+              className="min-w-[680px] md:min-w-0 w-full aspect-[1.414/1] bg-[#eef2f6] text-[#0f172a] p-6 sm:p-10 md:p-12 flex flex-col justify-between shadow-xl rounded-xl border border-slate-300 print:shadow-none print:rounded-none print:border-none print:aspect-auto print:min-h-screen print:page-break-before"
+              style={{ fontFamily: 'Inter, system-ui, sans-serif' }}
+            >
             {/* Top Bar Section with Approval Boxes */}
             <div className="flex items-start justify-between gap-6 pb-6 border-b border-slate-300">
               {/* Approval Box: ACC TANGGAL | TALENTA | KLIENT */}
@@ -361,6 +371,7 @@ export const OfficialDesignBriefSheet: React.FC<OfficialDesignBriefSheetProps> =
               <span>obeecreatives — Packaging OS</span>
             </div>
           </div>
+        </div>
 
         </div>
 

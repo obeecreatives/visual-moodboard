@@ -12,13 +12,15 @@ import {
   Layers,
   UserCheck,
   Building2,
-  Share2
+  Share2,
+  Menu
 } from 'lucide-react';
 import { UserProfile, Role, BriefProject } from '../../types';
 
 interface HeaderProps {
   isSidebarCollapsed: boolean;
   toggleSidebar: () => void;
+  onOpenMobileSidebar?: () => void;
   theme: 'dark' | 'light';
   toggleTheme: () => void;
   activeUser: UserProfile;
@@ -37,6 +39,7 @@ interface HeaderProps {
 export const Header: React.FC<HeaderProps> = ({
   isSidebarCollapsed,
   toggleSidebar,
+  onOpenMobileSidebar,
   theme,
   toggleTheme,
   activeUser,
@@ -80,29 +83,41 @@ export const Header: React.FC<HeaderProps> = ({
 
   return (
     <header className="sticky top-0 z-40 w-full border-t-2 border-red-600 bg-slate-900 text-slate-100 shadow-md">
-      <div className="flex h-14 items-center justify-between px-3 md:px-5 gap-2">
+      <div className="flex h-14 items-center justify-between px-2.5 sm:px-4 md:px-5 gap-1.5 sm:gap-2">
         
         {/* Left Section: Brand & Sidebar Toggle */}
-        <div className="flex items-center gap-3">
+        <div className="flex items-center gap-2 sm:gap-3 min-w-0">
+          
+          {/* Mobile Hamburger Button */}
+          <button
+            onClick={onOpenMobileSidebar || toggleSidebar}
+            className="md:hidden flex h-8 w-8 items-center justify-center rounded-lg border border-slate-700 bg-slate-800 text-slate-300 hover:border-slate-600 hover:text-white transition shrink-0"
+            title="Buka Menu"
+            aria-label="Menu"
+          >
+            <Menu size={18} />
+          </button>
+
+          {/* Desktop Sidebar Toggle */}
           <button
             onClick={toggleSidebar}
             title={isSidebarCollapsed ? 'Buka Sidebar' : 'Tutup Sidebar'}
-            className="flex h-8 w-8 items-center justify-center rounded-lg border border-slate-700 bg-slate-800/80 text-slate-300 hover:border-slate-600 hover:bg-slate-700 hover:text-white transition-colors"
+            className="hidden md:flex h-8 w-8 items-center justify-center rounded-lg border border-slate-700 bg-slate-800/80 text-slate-300 hover:border-slate-600 hover:bg-slate-700 hover:text-white transition-colors shrink-0"
           >
             {isSidebarCollapsed ? <ChevronRight size={17} /> : <ChevronLeft size={17} />}
           </button>
 
           {/* obeecreatives Logo & Subtitle */}
-          <div className="flex items-center gap-2 cursor-pointer select-none">
+          <div className="flex items-center gap-1.5 sm:gap-2 cursor-pointer select-none shrink-0">
             <div className="flex h-7 w-7 items-center justify-center rounded-full bg-red-600 text-white font-bold text-xs shadow-sm">
               <span className="font-display">O</span>
             </div>
             <div className="flex flex-col">
               <div className="flex items-center gap-1 leading-none">
-                <span className="font-display font-bold text-base text-white tracking-tight">obee</span>
-                <span className="font-display font-bold text-base text-red-500 tracking-tight">creatives</span>
+                <span className="font-display font-bold text-sm sm:text-base text-white tracking-tight">obee</span>
+                <span className="font-display font-bold text-sm sm:text-base text-red-500 tracking-tight">creatives</span>
               </div>
-              <span className="text-[9.5px] uppercase tracking-wider text-slate-400 font-medium hidden sm:inline-block">
+              <span className="text-[9px] uppercase tracking-wider text-slate-400 font-medium hidden sm:inline-block">
                 Toolkit &amp; Packaging OS
               </span>
             </div>
@@ -194,13 +209,14 @@ export const Header: React.FC<HeaderProps> = ({
             <span className={`h-2 w-2 rounded-full ${isGasConnected ? 'bg-emerald-400' : 'bg-slate-500'}`} />
           </button>
 
-          {/* Export PDF Button */}
+          {/* Export PDF Button (Full on sm+, icon on mobile) */}
           <button
             onClick={openExportModal}
-            className="hidden sm:flex items-center gap-1.5 rounded-xl border border-red-500/40 bg-red-600 px-3 py-1.5 text-xs font-semibold text-white shadow hover:bg-red-700 transition"
+            className="flex items-center gap-1.5 rounded-xl border border-red-500/40 bg-red-600 px-2.5 sm:px-3 py-1.5 text-xs font-semibold text-white shadow hover:bg-red-700 transition"
+            title="Export Guideline PDF"
           >
             <Share2 size={13} />
-            <span>Export Guideline</span>
+            <span className="hidden sm:inline">Export Guideline</span>
           </button>
 
           {/* Theme Toggle (Dark / Light) */}
@@ -225,12 +241,13 @@ export const Header: React.FC<HeaderProps> = ({
           <div className="relative">
             <button
               onClick={() => setShowRoleDropdown(!showRoleDropdown)}
-              className={`flex items-center gap-2 rounded-xl border px-2.5 py-1.5 text-xs transition ${getRoleBadgeColor(activeUser.role)}`}
+              className={`flex items-center gap-1.5 sm:gap-2 rounded-xl border px-2 sm:px-2.5 py-1.5 text-xs transition ${getRoleBadgeColor(activeUser.role)}`}
+              title={`Peran: ${activeUser.role} (${activeUser.name})`}
             >
-              <div className="flex h-5 w-5 items-center justify-center rounded-full bg-slate-800 text-[10px] font-bold text-white">
+              <div className="flex h-5 w-5 items-center justify-center rounded-full bg-slate-800 text-[10px] font-bold text-white shrink-0">
                 {activeUser.avatarText}
               </div>
-              <div className="flex flex-col text-left leading-tight">
+              <div className="hidden sm:flex flex-col text-left leading-tight">
                 <span className="font-semibold">{activeUser.name.split(' ')[0]}</span>
                 <span className="text-[9px] uppercase tracking-wider opacity-80">{activeUser.role}</span>
               </div>

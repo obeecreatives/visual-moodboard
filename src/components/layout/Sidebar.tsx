@@ -10,8 +10,8 @@ import {
   RefreshCw, 
   Users, 
   Compass,
-  ArrowUpRight,
-  Camera
+  Camera,
+  X
 } from 'lucide-react';
 import { ActiveTab, Role } from '../../types';
 
@@ -25,6 +25,8 @@ interface SidebarProps {
   isSyncing: boolean;
   isGasConnected: boolean;
   userRole: Role;
+  isMobileOpen?: boolean;
+  onCloseMobile?: () => void;
 }
 
 export const Sidebar: React.FC<SidebarProps> = ({
@@ -36,7 +38,9 @@ export const Sidebar: React.FC<SidebarProps> = ({
   onManualSync,
   isSyncing,
   isGasConnected,
-  userRole
+  userRole,
+  isMobileOpen = false,
+  onCloseMobile
 }) => {
   const menuItems = [
     {
@@ -83,15 +87,18 @@ export const Sidebar: React.FC<SidebarProps> = ({
     }
   ];
 
-  return (
-    <aside
-      className={`fixed top-14 bottom-0 left-0 z-30 flex flex-col border-r border-slate-800 bg-slate-900 text-slate-300 transition-all duration-200 select-none ${
-        isCollapsed ? 'w-16' : 'w-64'
-      }`}
-    >
-      {/* Switch App OS Pill (Matches obeecreatives screenshot) */}
+  const handleItemClick = (id: ActiveTab) => {
+    setActiveTab(id);
+    if (onCloseMobile) {
+      onCloseMobile();
+    }
+  };
+
+  const renderContent = (isMobileView: boolean) => (
+    <>
+      {/* Switch App OS Pill */}
       <div className="p-3 border-b border-slate-800/80">
-        {!isCollapsed ? (
+        {!isCollapsed || isMobileView ? (
           <div className="flex items-center justify-between rounded-xl bg-slate-800/80 px-3 py-2 text-xs font-semibold text-white border border-slate-700/60 shadow-inner">
             <div className="flex items-center gap-2">
               <Compass size={14} className="text-red-500" />
@@ -112,7 +119,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
 
       {/* Main Navigation Menu */}
       <div className="flex-1 overflow-y-auto px-2 py-3 space-y-1">
-        {!isCollapsed && (
+        {(!isCollapsed || isMobileView) && (
           <div className="px-3 pb-2 text-[10px] font-bold uppercase tracking-wider text-slate-400">
             Menu Utama
           </div>
@@ -125,8 +132,8 @@ export const Sidebar: React.FC<SidebarProps> = ({
           return (
             <button
               key={item.id}
-              onClick={() => setActiveTab(item.id)}
-              title={isCollapsed ? item.label : undefined}
+              onClick={() => handleItemClick(item.id)}
+              title={isCollapsed && !isMobileView ? item.label : undefined}
               className={`group flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-left transition-all ${
                 isActive
                   ? 'bg-red-600 text-white font-semibold shadow-md shadow-red-950/40'
@@ -140,7 +147,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
                 }`}
               />
 
-              {!isCollapsed && (
+              {(!isCollapsed || isMobileView) && (
                 <div className="flex flex-col leading-tight truncate">
                   <span className="text-xs truncate">{item.label}</span>
                   <span
@@ -159,19 +166,22 @@ export const Sidebar: React.FC<SidebarProps> = ({
         {/* Administration / Management (Only for Lead Creative & Bendahara) */}
         {(userRole === 'developer' || userRole === 'bendahara') && (
           <div className="pt-4">
-            {!isCollapsed && (
+            {(!isCollapsed || isMobileView) && (
               <div className="px-3 pb-2 text-[10px] font-bold uppercase tracking-wider text-slate-400">
                 Sistem &amp; Hak Akses
               </div>
             )}
 
             <button
-              onClick={openUserModal}
-              title={isCollapsed ? 'Database Tim & Staf' : undefined}
+              onClick={() => {
+                openUserModal();
+                if (isMobileView && onCloseMobile) onCloseMobile();
+              }}
+              title={isCollapsed && !isMobileView ? 'Database Tim & Staf' : undefined}
               className="flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-left text-slate-300 hover:bg-slate-800 hover:text-white transition"
             >
               <Users size={17} className="flex-shrink-0 text-slate-400" />
-              {!isCollapsed && (
+              {(!isCollapsed || isMobileView) && (
                 <div className="flex flex-col leading-tight truncate">
                   <div className="flex items-center gap-1.5">
                     <span className="text-xs font-medium">Tim &amp; Direktori</span>
@@ -189,12 +199,15 @@ export const Sidebar: React.FC<SidebarProps> = ({
         {/* Headless GAS Menu */}
         <div className="pt-2">
           <button
-            onClick={openGasModal}
-            title={isCollapsed ? 'Headless GAS Center' : undefined}
+            onClick={() => {
+              openGasModal();
+              if (isMobileView && onCloseMobile) onCloseMobile();
+            }}
+            title={isCollapsed && !isMobileView ? 'Headless GAS Center' : undefined}
             className="flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-left text-slate-300 hover:bg-slate-800 hover:text-white transition"
           >
             <Database size={17} className="flex-shrink-0 text-slate-400" />
-            {!isCollapsed && (
+            {(!isCollapsed || isMobileView) && (
               <div className="flex flex-col leading-tight truncate">
                 <div className="flex items-center gap-1.5">
                   <span className="text-xs font-medium">Headless GAS</span>
@@ -207,9 +220,9 @@ export const Sidebar: React.FC<SidebarProps> = ({
         </div>
       </div>
 
-      {/* Bottom Sync Engine Section (Matches obeecreatives screenshot) */}
+      {/* Bottom Sync Engine Section */}
       <div className="p-3 border-t border-slate-800/80 bg-slate-950/60">
-        {!isCollapsed ? (
+        {!isCollapsed || isMobileView ? (
           <div className="space-y-2">
             <button
               onClick={onManualSync}
@@ -239,6 +252,63 @@ export const Sidebar: React.FC<SidebarProps> = ({
           </button>
         )}
       </div>
-    </aside>
+    </>
+  );
+
+  return (
+    <>
+      {/* 1. Desktop & Large Tablet Sidebar (Sticky in Normal Flex Flow) */}
+      <aside
+        className={`hidden md:flex flex-col sticky top-14 h-[calc(100vh-3.5rem)] flex-shrink-0 z-30 border-r border-slate-800 bg-slate-900 text-slate-300 transition-all duration-200 select-none ${
+          isCollapsed ? 'w-16' : 'w-64'
+        }`}
+      >
+        {renderContent(false)}
+      </aside>
+
+      {/* 2. Mobile Off-Canvas Drawer Backdrop */}
+      {isMobileOpen && (
+        <div
+          className="md:hidden fixed inset-0 z-50 bg-black/75 backdrop-blur-xs transition-opacity duration-300 animate-fade-in"
+          onClick={onCloseMobile}
+          aria-hidden="true"
+        />
+      )}
+
+      {/* 3. Mobile Off-Canvas Drawer Aside */}
+      <aside
+        className={`md:hidden fixed inset-y-0 left-0 z-50 w-72 max-w-[85vw] flex flex-col border-r border-slate-800 bg-slate-900 text-slate-300 shadow-2xl transition-transform duration-300 ease-in-out select-none ${
+          isMobileOpen ? 'translate-x-0' : '-translate-x-full pointer-events-none'
+        }`}
+      >
+        {/* Mobile Drawer Top Brand Header with Close Button */}
+        <div className="flex items-center justify-between px-4 py-3 border-b border-slate-800 bg-slate-950">
+          <div className="flex items-center gap-2">
+            <div className="flex h-7 w-7 items-center justify-center rounded-full bg-red-600 text-white font-bold text-xs shadow-sm">
+              <span className="font-display">O</span>
+            </div>
+            <div className="flex flex-col">
+              <div className="flex items-center gap-1 leading-none">
+                <span className="font-display font-bold text-sm text-white tracking-tight">obee</span>
+                <span className="font-display font-bold text-sm text-red-500 tracking-tight">creatives</span>
+              </div>
+              <span className="text-[9px] uppercase tracking-wider text-slate-400 font-medium">
+                Menu Navigasi OS
+              </span>
+            </div>
+          </div>
+
+          <button
+            onClick={onCloseMobile}
+            className="flex h-8 w-8 items-center justify-center rounded-xl text-slate-400 hover:text-white hover:bg-slate-800 transition"
+            aria-label="Tutup Menu"
+          >
+            <X size={18} />
+          </button>
+        </div>
+
+        {renderContent(true)}
+      </aside>
+    </>
   );
 };

@@ -44,7 +44,8 @@ import {
   Layers, 
   CheckSquare, 
   Check,
-  Camera 
+  Camera,
+  Menu
 } from 'lucide-react';
 
 export default function App() {
@@ -66,6 +67,9 @@ export default function App() {
       return false;
     }
   });
+
+  // Mobile sidebar drawer state
+  const [isMobileSidebarOpen, setIsMobileSidebarOpen] = useState<boolean>(false);
 
   // Active view tab
   const [activeTab, setActiveTab] = useState<ActiveTab>('pipeline');
@@ -468,6 +472,7 @@ export default function App() {
       <Header
         isSidebarCollapsed={isSidebarCollapsed}
         toggleSidebar={toggleSidebar}
+        onOpenMobileSidebar={() => setIsMobileSidebarOpen(true)}
         theme={theme}
         toggleTheme={toggleTheme}
         activeUser={activeUser}
@@ -489,7 +494,7 @@ export default function App() {
       {/* Main Body with Sidebar */}
       <div className="flex flex-1 relative overflow-hidden">
         
-        {/* Left Sidebar */}
+        {/* Left Sidebar (Desktop Sticky + Mobile Drawer) */}
         <Sidebar
           isCollapsed={isSidebarCollapsed}
           activeTab={activeTab}
@@ -500,10 +505,12 @@ export default function App() {
           isSyncing={isSyncing}
           isGasConnected={isGasConnected}
           userRole={activeUser.role}
+          isMobileOpen={isMobileSidebarOpen}
+          onCloseMobile={() => setIsMobileSidebarOpen(false)}
         />
 
         {/* Content Canvas */}
-        <main className="flex-1 overflow-y-auto p-4 md:p-6 pb-20">
+        <main className="flex-1 min-w-0 overflow-y-auto p-3 sm:p-5 md:p-6 pb-24 md:pb-8">
           
           {activeTab === 'pipeline' && (
             <PipelineView
@@ -579,49 +586,80 @@ export default function App() {
         </main>
       </div>
 
-      {/* Floating Bottom Navigation Bar on Mobile / Tablet */}
-      <nav className="md:hidden fixed bottom-0 left-0 right-0 z-40 bg-slate-900 border-t border-slate-800 flex items-center justify-around p-2 text-slate-400">
+      {/* Ergonomic Floating Bottom Navigation Bar for Mobile Phones & Tablets */}
+      <nav className="md:hidden fixed bottom-0 left-0 right-0 z-40 bg-slate-900/95 backdrop-blur-md border-t border-slate-800 flex items-center justify-around px-1 py-1.5 text-slate-400 pb-[calc(0.35rem+env(safe-area-inset-bottom))] shadow-2xl">
         <button
           onClick={() => setActiveTab('pipeline')}
-          className={`flex flex-col items-center gap-1 text-[10px] ${activeTab === 'pipeline' ? 'text-red-500 font-bold' : ''}`}
+          className={`flex flex-col items-center justify-center min-h-[44px] min-w-[44px] px-2 py-1 rounded-xl transition-all ${
+            activeTab === 'pipeline' 
+              ? 'text-white bg-red-600/20 font-bold' 
+              : 'hover:text-slate-200'
+          }`}
+          aria-label="Pipeline Kanban"
         >
-          <FolderKanban size={18} />
-          <span>Pipeline</span>
+          <FolderKanban size={18} className={activeTab === 'pipeline' ? 'text-red-500' : 'text-slate-400'} />
+          <span className="text-[10px] mt-0.5 leading-none">Pipeline</span>
         </button>
+
         <button
           onClick={() => setActiveTab('brief')}
-          className={`flex flex-col items-center gap-1 text-[10px] ${activeTab === 'brief' ? 'text-red-500 font-bold' : ''}`}
+          className={`flex flex-col items-center justify-center min-h-[44px] min-w-[44px] px-2 py-1 rounded-xl transition-all ${
+            activeTab === 'brief' 
+              ? 'text-white bg-red-600/20 font-bold' 
+              : 'hover:text-slate-200'
+          }`}
+          aria-label="Brief & Legalitas"
         >
-          <FileText size={18} />
-          <span>Brief</span>
+          <FileText size={18} className={activeTab === 'brief' ? 'text-red-500' : 'text-slate-400'} />
+          <span className="text-[10px] mt-0.5 leading-none">Brief</span>
         </button>
+
         <button
           onClick={() => setActiveTab('mood')}
-          className={`flex flex-col items-center gap-1 text-[10px] ${activeTab === 'mood' ? 'text-red-500 font-bold' : ''}`}
+          className={`flex flex-col items-center justify-center min-h-[44px] min-w-[44px] px-2 py-1 rounded-xl transition-all ${
+            activeTab === 'mood' 
+              ? 'text-white bg-red-600/20 font-bold' 
+              : 'hover:text-slate-200'
+          }`}
+          aria-label="Moodboard Studio"
         >
-          <Palette size={18} />
-          <span>Mood</span>
+          <Palette size={18} className={activeTab === 'mood' ? 'text-red-500' : 'text-slate-400'} />
+          <span className="text-[10px] mt-0.5 leading-none">Mood</span>
         </button>
+
         <button
           onClick={() => setActiveTab('mockup')}
-          className={`flex flex-col items-center gap-1 text-[10px] ${activeTab === 'mockup' ? 'text-red-500 font-bold' : ''}`}
+          className={`flex flex-col items-center justify-center min-h-[44px] min-w-[44px] px-2 py-1 rounded-xl transition-all ${
+            activeTab === 'mockup' 
+              ? 'text-white bg-red-600/20 font-bold' 
+              : 'hover:text-slate-200'
+          }`}
+          aria-label="Mockup Kemasan 3D"
         >
-          <Box size={18} />
-          <span>Mockup</span>
+          <Box size={18} className={activeTab === 'mockup' ? 'text-red-500' : 'text-slate-400'} />
+          <span className="text-[10px] mt-0.5 leading-none">Mockup</span>
         </button>
+
         <button
           onClick={() => setActiveTab('photo-studio')}
-          className={`flex flex-col items-center gap-1 text-[10px] ${activeTab === 'photo-studio' ? 'text-red-500 font-bold' : ''}`}
+          className={`flex flex-col items-center justify-center min-h-[44px] min-w-[44px] px-2 py-1 rounded-xl transition-all ${
+            activeTab === 'photo-studio' 
+              ? 'text-white bg-rose-600/25 font-bold ring-1 ring-rose-500/40' 
+              : 'hover:text-slate-200'
+          }`}
+          aria-label="Photo Studio OS"
         >
-          <Camera size={18} />
-          <span>Photo</span>
+          <Camera size={18} className={activeTab === 'photo-studio' ? 'text-rose-400' : 'text-slate-400'} />
+          <span className="text-[10px] mt-0.5 leading-none">Photo</span>
         </button>
+
         <button
-          onClick={() => setActiveTab('client-review')}
-          className={`flex flex-col items-center gap-1 text-[10px] ${activeTab === 'client-review' ? 'text-red-500 font-bold' : ''}`}
+          onClick={() => setIsMobileSidebarOpen(true)}
+          className="flex flex-col items-center justify-center min-h-[44px] min-w-[44px] px-2 py-1 rounded-xl transition-all hover:text-white"
+          aria-label="Buka Menu Lengkap"
         >
-          <CheckSquare size={18} />
-          <span>Review</span>
+          <Menu size={18} className="text-slate-400" />
+          <span className="text-[10px] mt-0.5 leading-none">Menu</span>
         </button>
       </nav>
 

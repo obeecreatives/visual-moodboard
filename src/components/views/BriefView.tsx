@@ -107,38 +107,40 @@ export const BriefView: React.FC<BriefViewProps> = ({
     <div className="space-y-6">
       
       {/* Top Banner Navigation & Official Document Trigger */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 p-4 rounded-2xl border border-slate-700/80 bg-slate-900 shadow-sm">
-        <div className="flex items-center gap-2">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 p-3 sm:p-4 rounded-2xl border border-slate-700/80 bg-slate-900 shadow-sm">
+        <div className="flex items-center gap-2 overflow-x-auto pb-1 sm:pb-0 scrollbar-none">
           <button
             onClick={() => setActiveTab('official_doc')}
-            className={`flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-semibold transition-colors ${
+            className={`flex items-center gap-2 px-3 sm:px-4 py-2 rounded-xl text-xs font-semibold whitespace-nowrap transition-colors ${
               activeTab === 'official_doc'
                 ? 'bg-red-600 text-white shadow-sm'
                 : 'text-slate-400 hover:text-white hover:bg-slate-800'
             }`}
           >
-            <FileText className="w-4 h-4" />
-            <span>Formulir Desain Brief Kemasan Resmi (Standar Dokumen)</span>
+            <FileText className="w-4 h-4 shrink-0" />
+            <span className="hidden sm:inline">Formulir Desain Brief Kemasan Resmi (Standar Dokumen)</span>
+            <span className="sm:hidden">Dokumen Resmi (2 Hal)</span>
           </button>
 
           <button
             onClick={() => setActiveTab('visual_os')}
-            className={`flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-semibold transition-colors ${
+            className={`flex items-center gap-2 px-3 sm:px-4 py-2 rounded-xl text-xs font-semibold whitespace-nowrap transition-colors ${
               activeTab === 'visual_os'
                 ? 'bg-red-600 text-white shadow-sm'
                 : 'text-slate-400 hover:text-white hover:bg-slate-800'
             }`}
           >
-            <Sparkles className="w-4 h-4" />
-            <span>Visual Identity &amp; Personality OS</span>
+            <Sparkles className="w-4 h-4 shrink-0" />
+            <span className="hidden sm:inline">Visual Identity &amp; Personality OS</span>
+            <span className="sm:hidden">Visual Identity OS</span>
           </button>
         </div>
 
         <button
           onClick={() => setIsOfficialSheetOpen(true)}
-          className="flex items-center justify-center gap-2 px-4 py-2 rounded-xl text-xs font-semibold bg-blue-600 hover:bg-blue-700 text-white transition-colors shadow-sm whitespace-nowrap"
+          className="flex items-center justify-center gap-2 px-3 sm:px-4 py-2 rounded-xl text-xs font-semibold bg-blue-600 hover:bg-blue-700 text-white transition-colors shadow-sm whitespace-nowrap shrink-0"
         >
-          <Printer className="w-4 h-4" />
+          <Printer className="w-4 h-4 shrink-0" />
           <span>Cetak / Export Format Resmi (2 Halaman)</span>
         </button>
       </div>
