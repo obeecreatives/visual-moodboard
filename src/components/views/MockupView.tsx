@@ -226,13 +226,14 @@ export const MockupView: React.FC<MockupViewProps> = ({
                 <button
                   key={k}
                   onClick={() => updateMock({ shape: k as PackagingShapeKey })}
+                  title={label}
                   className={`rounded-xl px-2.5 py-1.5 text-xs text-left transition truncate ${
                     isSelected
                       ? 'bg-red-600 text-white font-bold shadow-md'
                       : 'bg-slate-800 text-slate-300 border border-slate-700 hover:border-slate-600'
                   }`}
                 >
-                  {label.split(' / ')[0]}
+                  {label.split(' (')[0]}
                 </button>
               );
             })}

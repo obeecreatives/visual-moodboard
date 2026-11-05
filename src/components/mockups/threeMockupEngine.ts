@@ -38,13 +38,11 @@ export const createPackagingLabelTexture = (
   const { width, height } = canvas;
   const baseColor = config.color || '#C9B896';
   const isKraft = config.materialStyle === 'kraft';
-  const isMetallic = config.materialStyle === 'glossy';
 
   // 1. Background Fill
   if (isKraft) {
     ctx.fillStyle = '#C29B63';
     ctx.fillRect(0, 0, width, height);
-    // Subtle Kraft fibers
     ctx.fillStyle = 'rgba(0,0,0,0.035)';
     for (let i = 0; i < 4000; i++) {
       const rx = Math.random() * width;
@@ -64,13 +62,12 @@ export const createPackagingLabelTexture = (
     ctx.fillRect(0, 0, width, height);
   }
 
-  // 2. Central Label Panel Frame (For high-end packaging aesthetic)
-  const padX = width * 0.18;
-  const padY = height * 0.12;
+  // 2. Central Label Panel Frame
+  const padX = width * 0.16;
+  const padY = height * 0.10;
   const labelW = width - padX * 2;
   const labelH = height - padY * 2;
 
-  // White / Off-white interior label plate
   const isDarkBase = isColorDark(baseColor);
   ctx.fillStyle = isDarkBase ? '#121214' : '#FFFFFF';
   roundRect(ctx, padX, padY, labelW, labelH, 24);
@@ -95,7 +92,7 @@ export const createPackagingLabelTexture = (
 
   // 4. Brand Logo
   const centerX = width / 2;
-  let cursorY = padY + 70;
+  let cursorY = padY + 65;
 
   if (logoImgElement && logoImgElement.complete && logoImgElement.naturalWidth > 0) {
     const maxLogoSize = 130 * (config.logoScale || 1);
@@ -237,7 +234,20 @@ export const createContactShadowTexture = (): THREE.CanvasTexture => {
 };
 
 /**
- * Builds realistic 3D Model Group for the selected packaging shape
+ * Helper to build braided rope curve for Paper Bag handles
+ */
+function createRopeHandleGeometry(x1: number, x2: number, y: number, z: number, height: number): THREE.TubeGeometry {
+  const p1 = new THREE.Vector3(x1, y, z);
+  const p2 = new THREE.Vector3(x1 * 0.9, y + height * 0.7, z + 0.15);
+  const p3 = new THREE.Vector3(0, y + height, z + 0.25);
+  const p4 = new THREE.Vector3(x2 * 0.9, y + height * 0.7, z + 0.15);
+  const p5 = new THREE.Vector3(x2, y, z);
+  const curve = new THREE.CatmullRomCurve3([p1, p2, p3, p4, p5]);
+  return new THREE.TubeGeometry(curve, 32, 0.05, 8, false);
+}
+
+/**
+ * Builds realistic, distinct 3D Model Group for ALL 17 packaging shapes
  */
 export const buildPackaging3DGroup = (
   shapeKey: PackagingShapeKey,
@@ -272,6 +282,12 @@ export const buildPackaging3DGroup = (
     envMapIntensity: 1.4
   });
 
+  const darkCordMaterial = new THREE.MeshStandardMaterial({
+    color: new THREE.Color('#222224'),
+    roughness: 0.9,
+    metalness: 0.1
+  });
+
   const glassMaterial = new THREE.MeshPhysicalMaterial({
     color: new THREE.Color('#FFFFFF'),
     transparent: true,
@@ -298,9 +314,22 @@ export const buildPackaging3DGroup = (
     attenuationDistance: 1.2
   });
 
+  const labelMaterial = new THREE.MeshPhysicalMaterial({
+    map: labelTexture,
+    roughness: isMatte ? 0.6 : 0.2,
+    clearcoat: isKraft ? 0 : 0.85,
+    transparent: true,
+    polygonOffset: true,
+    polygonOffsetFactor: -1,
+    polygonOffsetUnits: -1
+  });
+
+  // Switch statement handling ALL 17 distinctive packaging forms
   switch (shapeKey) {
+    // -------------------------------------------------------------
+    // 1. TOPLES JAR KACA (Madu / Selai / Cream)
+    // -------------------------------------------------------------
     case 'jar': {
-      // 1. Thick Glass Jar Hexagonal / Cylindrical
       const jarHeight = 3.6;
       const jarRadius = 1.6;
       const jarGeo = new THREE.CylinderGeometry(jarRadius, jarRadius * 0.96, jarHeight, 48, 1);
@@ -309,13 +338,13 @@ export const buildPackaging3DGroup = (
       jarMesh.castShadow = !isSoftwareGl;
       group.add(jarMesh);
 
-      // 2. Honey Liquid Core inside the Jar
+      // Honey liquid core
       const liquidGeo = new THREE.CylinderGeometry(jarRadius * 0.91, jarRadius * 0.88, jarHeight * 0.82, 32);
       const liquidMesh = new THREE.Mesh(liquidGeo, honeyLiquidMaterial);
       liquidMesh.position.y = (jarHeight * 0.82) / 2 + 0.2;
       group.add(liquidMesh);
 
-      // 3. Gold Metallic Screw Lid
+      // Gold Metallic Screw Lid
       const lidHeight = 0.55;
       const lidRadius = jarRadius * 1.02;
       const lidGeo = new THREE.CylinderGeometry(lidRadius, lidRadius, lidHeight, 48);
@@ -331,37 +360,30 @@ export const buildPackaging3DGroup = (
       lidRing.position.y = jarHeight + lidHeight + 0.04;
       group.add(lidRing);
 
-      // 4. Wrap-around Brand Label (Curved Cylindrical Decal)
+      // Curved Cylindrical Label
       const labelHeight = jarHeight * 0.62;
-      const labelRadius = jarRadius + 0.02; // Offset slightly to eliminate z-fighting
-      const labelGeo = new THREE.CylinderGeometry(labelRadius, labelRadius, labelHeight, 48, 1, true, -Math.PI * 0.6, Math.PI * 1.2);
-      const labelMat = new THREE.MeshPhysicalMaterial({
-        map: labelTexture,
-        roughness: isMatte ? 0.6 : 0.2,
-        clearcoat: isKraft ? 0 : 0.8,
-        transparent: true,
-        polygonOffset: true,
-        polygonOffsetFactor: -1,
-        polygonOffsetUnits: -1,
-        side: THREE.DoubleSide
-      });
-      const labelMesh = new THREE.Mesh(labelGeo, labelMat);
+      const labelGeo = new THREE.CylinderGeometry(jarRadius + 0.02, jarRadius + 0.02, labelHeight, 48, 1, true, -Math.PI * 0.6, Math.PI * 1.2);
+      const cylLabelMat = labelMaterial.clone();
+      cylLabelMat.side = THREE.DoubleSide;
+      const labelMesh = new THREE.Mesh(labelGeo, cylLabelMat);
       labelMesh.position.y = jarHeight / 2 + 0.15;
       group.add(labelMesh);
       break;
     }
 
+    // -------------------------------------------------------------
+    // 2. BOTOL KACA / PLASTIK (Minuman, Madu Cair, Syrup)
+    // -------------------------------------------------------------
     case 'bottle': {
-      // Sleek Beverage / Coldbrew Bottle with curved neck
       const points: THREE.Vector2[] = [];
       points.push(new THREE.Vector2(0, 0));
       points.push(new THREE.Vector2(1.3, 0));
       points.push(new THREE.Vector2(1.35, 0.2));
-      points.push(new THREE.Vector2(1.35, 3.2)); // Straight body
-      points.push(new THREE.Vector2(1.28, 3.8)); // Shoulder curve
-      points.push(new THREE.Vector2(0.65, 4.6)); // Neck start
-      points.push(new THREE.Vector2(0.62, 5.5)); // Neck top
-      points.push(new THREE.Vector2(0.72, 5.6)); // Lip bead
+      points.push(new THREE.Vector2(1.35, 3.2));
+      points.push(new THREE.Vector2(1.28, 3.8));
+      points.push(new THREE.Vector2(0.65, 4.6));
+      points.push(new THREE.Vector2(0.62, 5.5));
+      points.push(new THREE.Vector2(0.72, 5.6));
       points.push(new THREE.Vector2(0.72, 5.75));
       points.push(new THREE.Vector2(0.55, 5.75));
       points.push(new THREE.Vector2(0, 5.75));
@@ -371,7 +393,7 @@ export const buildPackaging3DGroup = (
       bottleMesh.castShadow = !isSoftwareGl;
       group.add(bottleMesh);
 
-      // Inner Liquid
+      // Liquid inside
       const liqPoints: THREE.Vector2[] = [];
       liqPoints.push(new THREE.Vector2(0, 0.1));
       liqPoints.push(new THREE.Vector2(1.25, 0.1));
@@ -382,7 +404,7 @@ export const buildPackaging3DGroup = (
       const liqMesh = new THREE.Mesh(liqGeo, honeyLiquidMaterial);
       group.add(liqMesh);
 
-      // Crown / Screw Cap
+      // Gold crown/screw cap
       const capGeo = new THREE.CylinderGeometry(0.74, 0.74, 0.5, 32);
       const capMesh = new THREE.Mesh(capGeo, goldMetalMaterial);
       capMesh.position.y = 5.7;
@@ -390,21 +412,18 @@ export const buildPackaging3DGroup = (
 
       // Curved Bottle Label
       const labelGeo = new THREE.CylinderGeometry(1.38, 1.38, 2.3, 48, 1, true, -Math.PI * 0.65, Math.PI * 1.3);
-      const labelMat = new THREE.MeshPhysicalMaterial({
-        map: labelTexture,
-        roughness: isMatte ? 0.6 : 0.2,
-        clearcoat: 0.9,
-        transparent: true,
-        side: THREE.DoubleSide
-      });
-      const labelMesh = new THREE.Mesh(labelGeo, labelMat);
+      const cylLabelMat = labelMaterial.clone();
+      cylLabelMat.side = THREE.DoubleSide;
+      const labelMesh = new THREE.Mesh(labelGeo, cylLabelMat);
       labelMesh.position.y = 1.9;
       group.add(labelMesh);
       break;
     }
 
+    // -------------------------------------------------------------
+    // 3. CANISTER KALENG SILINDER (Teh, Cookies, Kopi Biji)
+    // -------------------------------------------------------------
     case 'canister': {
-      // Cylinder Tea / Cookies Canister with Gold Edges
       const height = 4.4;
       const radius = 1.5;
       const canGeo = new THREE.CylinderGeometry(radius, radius, height, 48);
@@ -428,21 +447,18 @@ export const buildPackaging3DGroup = (
 
       // Canister Label Wrap
       const labelGeo = new THREE.CylinderGeometry(radius + 0.02, radius + 0.02, height * 0.72, 48, 1, true, -Math.PI * 0.6, Math.PI * 1.2);
-      const labelMat = new THREE.MeshPhysicalMaterial({
-        map: labelTexture,
-        roughness: isMatte ? 0.6 : 0.2,
-        clearcoat: 0.8,
-        transparent: true,
-        side: THREE.DoubleSide
-      });
-      const labelMesh = new THREE.Mesh(labelGeo, labelMat);
+      const cylLabelMat = labelMaterial.clone();
+      cylLabelMat.side = THREE.DoubleSide;
+      const labelMesh = new THREE.Mesh(labelGeo, cylLabelMat);
       labelMesh.position.y = height * 0.45;
       group.add(labelMesh);
       break;
     }
 
+    // -------------------------------------------------------------
+    // 4. TUBE KOSMETIK / PASTA
+    // -------------------------------------------------------------
     case 'tube': {
-      // Cosmetic Squeeze Tube
       const tubeHeight = 4.2;
       const tubeRadius = 1.2;
       const tubeGeo = new THREE.CylinderGeometry(tubeRadius * 0.9, tubeRadius, tubeHeight, 32);
@@ -457,7 +473,7 @@ export const buildPackaging3DGroup = (
       crimpMesh.position.y = tubeHeight + 0.8 + 0.15;
       group.add(crimpMesh);
 
-      // Fluted Flip Cap
+      // Fluted Cap Base
       const capGeo = new THREE.CylinderGeometry(tubeRadius * 0.95, tubeRadius * 1.05, 0.8, 32);
       const capMesh = new THREE.Mesh(capGeo, goldMetalMaterial);
       capMesh.position.y = 0.4;
@@ -465,28 +481,208 @@ export const buildPackaging3DGroup = (
 
       // Tube Label
       const labelGeo = new THREE.CylinderGeometry(tubeRadius + 0.02, tubeRadius + 0.02, tubeHeight * 0.65, 32, 1, true, -Math.PI * 0.6, Math.PI * 1.2);
-      const labelMat = new THREE.MeshPhysicalMaterial({
-        map: labelTexture,
-        roughness: 0.3,
-        clearcoat: 0.9,
-        transparent: true,
-        side: THREE.DoubleSide
-      });
-      const labelMesh = new THREE.Mesh(labelGeo, labelMat);
+      const cylLabelMat = labelMaterial.clone();
+      cylLabelMat.side = THREE.DoubleSide;
+      const labelMesh = new THREE.Mesh(labelGeo, cylLabelMat);
       labelMesh.position.y = tubeHeight / 2 + 0.8;
       group.add(labelMesh);
       break;
     }
 
-    case 'pouch':
-    case 'standpouch':
-    case 'zipperpouch': {
-      // Standing Pouch Doypack with realistic curvature
+    // -------------------------------------------------------------
+    // 5. PAPER BAG JINJING DENGAN TALI ROPE ASLI
+    // -------------------------------------------------------------
+    case 'paperbag': {
+      const bagW = 3.4;
+      const bagH = 4.4;
+      const bagD = 1.6;
+
+      // Main paper bag body with folded side bellows
+      const bagGeo = new THREE.BoxGeometry(bagW, bagH, bagD);
+      const bagMesh = new THREE.Mesh(bagGeo, bodyMaterial);
+      bagMesh.position.y = bagH / 2;
+      bagMesh.castShadow = !isSoftwareGl;
+      group.add(bagMesh);
+
+      // Top turn-over rim hem
+      const cuffGeo = new THREE.BoxGeometry(bagW * 1.02, 0.4, bagD * 1.02);
+      const cuffMesh = new THREE.Mesh(cuffGeo, bodyMaterial);
+      cuffMesh.position.y = bagH - 0.2;
+      group.add(cuffMesh);
+
+      // Metallic eyelets / grommets
+      const eyeletGeo = new THREE.TorusGeometry(0.1, 0.03, 12, 24);
+      const eyeletPositions = [
+        [-0.8, bagH - 0.25, bagD / 2 + 0.02],
+        [0.8, bagH - 0.25, bagD / 2 + 0.02],
+        [-0.8, bagH - 0.25, -bagD / 2 - 0.02],
+        [0.8, bagH - 0.25, -bagD / 2 - 0.02]
+      ];
+      eyeletPositions.forEach(([x, y, z]) => {
+        const eyelet = new THREE.Mesh(eyeletGeo, goldMetalMaterial);
+        eyelet.position.set(x, y, z);
+        group.add(eyelet);
+      });
+
+      // 3D Braided Rope Handles
+      const frontRopeGeo = createRopeHandleGeometry(-0.8, 0.8, bagH - 0.25, bagD / 2 + 0.05, 1.4);
+      const frontRope = new THREE.Mesh(frontRopeGeo, darkCordMaterial);
+      group.add(frontRope);
+
+      const backRopeGeo = createRopeHandleGeometry(-0.8, 0.8, bagH - 0.25, -bagD / 2 - 0.05, 1.4);
+      const backRope = new THREE.Mesh(backRopeGeo, darkCordMaterial);
+      backRope.rotation.y = Math.PI;
+      group.add(backRope);
+
+      // Front Brand Label Plate
+      const labelGeo = new THREE.PlaneGeometry(bagW * 0.82, bagH * 0.65);
+      const labelMesh = new THREE.Mesh(labelGeo, labelMaterial);
+      labelMesh.position.set(0, bagH * 0.42, bagD / 2 + 0.02);
+      group.add(labelMesh);
+      break;
+    }
+
+    // -------------------------------------------------------------
+    // 6. KANTONG KERTAS KRAFT (Bakery / Roti / Kopi) DENGAN ZIGZAG TOP
+    // -------------------------------------------------------------
+    case 'kraftbag': {
+      const bagW = 3.2;
+      const bagH = 4.4;
+      const bagD = 1.5;
+
+      const bagGeo = new THREE.BoxGeometry(bagW, bagH, bagD);
+      const bagMesh = new THREE.Mesh(bagGeo, bodyMaterial);
+      bagMesh.position.y = bagH / 2;
+      bagMesh.castShadow = !isSoftwareGl;
+      group.add(bagMesh);
+
+      // Zigzag serrated die-cut top edge (characteristic bakery kraft bag)
+      const toothCount = 12;
+      const toothW = (bagW * 1.02) / toothCount;
+      const toothGeo = new THREE.ConeGeometry(toothW / 2, 0.25, 4);
+      for (let i = 0; i < toothCount; i++) {
+        const tx = -bagW / 2 + (i + 0.5) * toothW;
+        const toothFront = new THREE.Mesh(toothGeo, bodyMaterial);
+        toothFront.position.set(tx, bagH + 0.1, bagD / 2);
+        group.add(toothFront);
+
+        const toothBack = new THREE.Mesh(toothGeo, bodyMaterial);
+        toothBack.position.set(tx, bagH + 0.1, -bagD / 2);
+        group.add(toothBack);
+      }
+
+      // Top folded foldline crease
+      const foldLineGeo = new THREE.BoxGeometry(bagW * 1.01, 0.08, bagD * 1.01);
+      const foldLine = new THREE.Mesh(foldLineGeo, goldMetalMaterial);
+      foldLine.position.y = bagH - 0.6;
+      group.add(foldLine);
+
+      // Front label
+      const labelGeo = new THREE.PlaneGeometry(bagW * 0.85, bagH * 0.65);
+      const labelMesh = new THREE.Mesh(labelGeo, labelMaterial);
+      labelMesh.position.set(0, bagH * 0.44, bagD / 2 + 0.02);
+      group.add(labelMesh);
+      break;
+    }
+
+    // -------------------------------------------------------------
+    // 7. GIFT BOX MEWAH (TUTUP PISAH LID & BASE + GOLD NECK)
+    // -------------------------------------------------------------
+    case 'giftbox': {
+      const boxW = 3.4;
+      const boxH = 2.2;
+      const boxD = 3.0;
+
+      // Base Tray
+      const baseGeo = new THREE.BoxGeometry(boxW, boxH, boxD);
+      const baseMesh = new THREE.Mesh(baseGeo, bodyMaterial);
+      baseMesh.position.y = boxH / 2;
+      baseMesh.castShadow = !isSoftwareGl;
+      group.add(baseMesh);
+
+      // Contrasting Gold Inner Neck Collar (protrudes between base and lid)
+      const neckGeo = new THREE.BoxGeometry(boxW * 0.96, 0.6, boxD * 0.96);
+      const neckMesh = new THREE.Mesh(neckGeo, goldMetalMaterial);
+      neckMesh.position.y = boxH + 0.1;
+      group.add(neckMesh);
+
+      // Separate Luxury Lid Cap (Seated with gold trim)
+      const lidH = 1.0;
+      const lidGeo = new THREE.BoxGeometry(boxW * 1.03, lidH, boxD * 1.03);
+      const lidMesh = new THREE.Mesh(lidGeo, bodyMaterial);
+      lidMesh.position.y = boxH + 0.4 + lidH / 2;
+      lidMesh.castShadow = !isSoftwareGl;
+      group.add(lidMesh);
+
+      // Gold Ribbon Band Crossing the Lid
+      const ribbonGeo1 = new THREE.BoxGeometry(boxW * 1.04, 0.04, 0.4);
+      const ribbon1 = new THREE.Mesh(ribbonGeo1, goldMetalMaterial);
+      ribbon1.position.y = boxH + 0.4 + lidH + 0.02;
+      group.add(ribbon1);
+
+      const ribbonGeo2 = new THREE.BoxGeometry(0.4, 0.04, boxD * 1.04);
+      const ribbon2 = new THREE.Mesh(ribbonGeo2, goldMetalMaterial);
+      ribbon2.position.y = boxH + 0.4 + lidH + 0.02;
+      group.add(ribbon2);
+
+      // Top Lid Face Brand Label Plate
+      const topLabelGeo = new THREE.PlaneGeometry(boxW * 0.75, boxD * 0.75);
+      const topLabel = new THREE.Mesh(topLabelGeo, labelMaterial);
+      topLabel.rotation.x = -Math.PI / 2;
+      topLabel.position.set(0, boxH + 0.4 + lidH + 0.04, 0);
+      group.add(topLabel);
+      break;
+    }
+
+    // -------------------------------------------------------------
+    // 8. MAILER BOX E-COMMERCE (KARTON CORRUGATED LIPAT TUCK-IN)
+    // -------------------------------------------------------------
+    case 'mailerbox': {
+      const boxW = 4.2;
+      const boxH = 1.4;
+      const boxD = 3.2;
+
+      // Low profile wide folding mailer
+      const mailerGeo = new THREE.BoxGeometry(boxW, boxH, boxD);
+      const mailerMesh = new THREE.Mesh(mailerGeo, bodyMaterial);
+      mailerMesh.position.y = boxH / 2;
+      mailerMesh.castShadow = !isSoftwareGl;
+      group.add(mailerMesh);
+
+      // Side folding tuck flaps
+      const flapGeo = new THREE.BoxGeometry(0.08, boxH * 0.8, boxD * 0.7);
+      const leftFlap = new THREE.Mesh(flapGeo, goldMetalMaterial);
+      leftFlap.position.set(-boxW / 2 - 0.04, boxH / 2, 0);
+      group.add(leftFlap);
+
+      const rightFlap = new THREE.Mesh(flapGeo, goldMetalMaterial);
+      rightFlap.position.set(boxW / 2 + 0.04, boxH / 2, 0);
+      group.add(rightFlap);
+
+      // Front closing locking notch
+      const notchGeo = new THREE.BoxGeometry(0.8, 0.12, 0.08);
+      const notch = new THREE.Mesh(notchGeo, goldMetalMaterial);
+      notch.position.set(0, boxH * 0.45, boxD / 2 + 0.04);
+      group.add(notch);
+
+      // Top Lid Surface Branding (Main e-commerce unboxing label)
+      const topLabelGeo = new THREE.PlaneGeometry(boxW * 0.85, boxD * 0.82);
+      const topLabel = new THREE.Mesh(topLabelGeo, labelMaterial);
+      topLabel.rotation.x = -Math.PI / 2;
+      topLabel.position.set(0, boxH + 0.02, 0);
+      group.add(topLabel);
+      break;
+    }
+
+    // -------------------------------------------------------------
+    // 9. STANDING POUCH MODERN DENGAN OVAL WINDOW VIEW
+    // -------------------------------------------------------------
+    case 'standpouch': {
       const width = 3.2;
       const height = 4.6;
-      const depth = 1.3;
+      const depth = 1.4;
 
-      // Pouch main body (pinched at top, voluminous at bottom)
+      // Volumetric Doypack body
       const pouchGeo = new THREE.CylinderGeometry(width * 0.48, width * 0.52, height, 32, 1);
       pouchGeo.scale(1, 1, depth / width);
       const pouchMesh = new THREE.Mesh(pouchGeo, bodyMaterial);
@@ -494,7 +690,276 @@ export const buildPackaging3DGroup = (
       pouchMesh.castShadow = !isSoftwareGl;
       group.add(pouchMesh);
 
-      // Top heat seal / zipper crimp
+      // Top Heat Seal with tear notches
+      const sealGeo = new THREE.BoxGeometry(width * 1.05, 0.45, 0.14);
+      const sealMesh = new THREE.Mesh(sealGeo, goldMetalMaterial);
+      sealMesh.position.y = height + 0.15;
+      group.add(sealMesh);
+
+      // Clear Window Mesh revealing interior contents
+      const winGeo = new THREE.CylinderGeometry(0.8, 0.8, 0.9, 24);
+      winGeo.scale(1, 1, 0.1);
+      const winMat = new THREE.MeshPhysicalMaterial({
+        color: new THREE.Color('#D89E3A'), // Roasted granola/coffee beans
+        roughness: 0.2,
+        clearcoat: 1.0
+      });
+      const winMesh = new THREE.Mesh(winGeo, winMat);
+      winMesh.position.set(0, height * 0.35, depth / 2 + 0.01);
+      group.add(winMesh);
+
+      // Front Curved Label
+      const labelGeo = new THREE.PlaneGeometry(width * 0.82, height * 0.55);
+      const labelMesh = new THREE.Mesh(labelGeo, labelMaterial);
+      labelMesh.position.set(0, height * 0.65, (depth / 2) * 0.88 + 0.02);
+      group.add(labelMesh);
+      break;
+    }
+
+    // -------------------------------------------------------------
+    // 10. POUCH ZIPPER (RESEALABLE DOYPACK DENGAN EURO SLOT)
+    // -------------------------------------------------------------
+    case 'zipperpouch': {
+      const width = 3.2;
+      const height = 4.6;
+      const depth = 1.3;
+
+      const pouchGeo = new THREE.CylinderGeometry(width * 0.48, width * 0.52, height, 32, 1);
+      pouchGeo.scale(1, 1, depth / width);
+      const pouchMesh = new THREE.Mesh(pouchGeo, bodyMaterial);
+      pouchMesh.position.y = height / 2;
+      pouchMesh.castShadow = !isSoftwareGl;
+      group.add(pouchMesh);
+
+      // Wide Top Header Seal
+      const headerGeo = new THREE.BoxGeometry(width * 1.05, 0.7, 0.14);
+      const headerMesh = new THREE.Mesh(headerGeo, goldMetalMaterial);
+      headerMesh.position.y = height + 0.25;
+      group.add(headerMesh);
+
+      // Euro-slot hanging punch hole
+      const holeGeo = new THREE.TorusGeometry(0.2, 0.04, 12, 24);
+      const holeMesh = new THREE.Mesh(holeGeo, darkCordMaterial);
+      holeMesh.position.set(0, height + 0.35, 0.08);
+      group.add(holeMesh);
+
+      // Red Zip Pull Line
+      const zipGeo = new THREE.BoxGeometry(width * 0.98, 0.08, 0.16);
+      const zipMesh = new THREE.Mesh(zipGeo, new THREE.MeshBasicMaterial({ color: 0xDC2626 }));
+      zipMesh.position.set(0, height - 0.15, 0);
+      group.add(zipMesh);
+
+      // Front Label
+      const labelGeo = new THREE.PlaneGeometry(width * 0.84, height * 0.7);
+      const labelMesh = new THREE.Mesh(labelGeo, labelMaterial);
+      labelMesh.position.set(0, height * 0.45, (depth / 2) * 0.88 + 0.02);
+      group.add(labelMesh);
+      break;
+    }
+
+    // -------------------------------------------------------------
+    // 11. FLOW WRAP (KEMASAN SNACK / BISKUIT HORIZONTAL)
+    // -------------------------------------------------------------
+    case 'flowbag': {
+      // Horizontal snack pillow pack
+      const flowW = 4.4;
+      const flowH = 2.2;
+      const flowD = 1.5;
+
+      const bagGeo = new THREE.CylinderGeometry(flowH * 0.48, flowH * 0.48, flowW * 0.75, 32);
+      bagGeo.rotateZ(Math.PI / 2);
+      bagGeo.scale(1, 1, flowD / flowH);
+      const bagMesh = new THREE.Mesh(bagGeo, bodyMaterial);
+      bagMesh.position.y = flowH / 2;
+      bagMesh.castShadow = !isSoftwareGl;
+      group.add(bagMesh);
+
+      // Left & Right Serrated Fin Seals
+      const sealGeo = new THREE.BoxGeometry(0.4, flowH * 0.95, 0.12);
+      const leftSeal = new THREE.Mesh(sealGeo, goldMetalMaterial);
+      leftSeal.position.set(-flowW / 2 + 0.2, flowH / 2, 0);
+      group.add(leftSeal);
+
+      const rightSeal = new THREE.Mesh(sealGeo, goldMetalMaterial);
+      rightSeal.position.set(flowW / 2 - 0.2, flowH / 2, 0);
+      group.add(rightSeal);
+
+      // Front Curved Label
+      const labelGeo = new THREE.PlaneGeometry(flowW * 0.6, flowH * 0.75);
+      const labelMesh = new THREE.Mesh(labelGeo, labelMaterial);
+      labelMesh.position.set(0, flowH / 2, (flowD / 2) * 0.92 + 0.02);
+      group.add(labelMesh);
+      break;
+    }
+
+    // -------------------------------------------------------------
+    // 12. GABLE-TOP KARTON SUSU & JUS (ATAP SEGITIGA + SPOUT CAP)
+    // -------------------------------------------------------------
+    case 'gabletop': {
+      const w = 2.5;
+      const h = 3.6;
+      const d = 2.5;
+
+      // Lower rectangular carton body
+      const bodyGeo = new THREE.BoxGeometry(w, h, d);
+      const bodyMesh = new THREE.Mesh(bodyGeo, bodyMaterial);
+      bodyMesh.position.y = h / 2;
+      bodyMesh.castShadow = !isSoftwareGl;
+      group.add(bodyMesh);
+
+      // Peaked Triangular Gable Roof
+      const roofH = 1.1;
+      const roofPoints: THREE.Vector2[] = [
+        new THREE.Vector2(-w / 2, 0),
+        new THREE.Vector2(0, roofH),
+        new THREE.Vector2(w / 2, 0)
+      ];
+      const roofShape = new THREE.Shape(roofPoints);
+      const roofGeo = new THREE.ExtrudeGeometry(roofShape, { depth: d, bevelEnabled: false });
+      roofGeo.translate(0, h, -d / 2);
+      const roofMesh = new THREE.Mesh(roofGeo, bodyMaterial);
+      group.add(roofMesh);
+
+      // Top vertical ridge seal
+      const ridgeGeo = new THREE.BoxGeometry(0.12, 0.35, d * 1.02);
+      const ridgeMesh = new THREE.Mesh(ridgeGeo, goldMetalMaterial);
+      ridgeMesh.position.set(0, h + roofH + 0.17, 0);
+      group.add(ridgeMesh);
+
+      // Plastic Screw Pour-Spout Cap on slanted front face
+      const capGeo = new THREE.CylinderGeometry(0.3, 0.3, 0.25, 24);
+      capGeo.rotateZ(Math.PI / 4);
+      const capMesh = new THREE.Mesh(capGeo, goldMetalMaterial);
+      capMesh.position.set(-0.4, h + roofH * 0.45, d / 2 * 0.6);
+      group.add(capMesh);
+
+      // Front Face Brand Label
+      const labelGeo = new THREE.PlaneGeometry(w * 0.9, h * 0.85);
+      const labelMesh = new THREE.Mesh(labelGeo, labelMaterial);
+      labelMesh.position.set(0, h * 0.46, d / 2 + 0.02);
+      group.add(labelMesh);
+      break;
+    }
+
+    // -------------------------------------------------------------
+    // 13. HANDLE BAG (PLASTIK / SPUNBOND DENGAN DIE-CUT OVAL)
+    // -------------------------------------------------------------
+    case 'handlebag': {
+      const bagW = 3.2;
+      const bagH = 4.6;
+      const bagD = 1.1;
+
+      const bagGeo = new THREE.BoxGeometry(bagW, bagH, bagD);
+      const bagMesh = new THREE.Mesh(bagGeo, bodyMaterial);
+      bagMesh.position.y = bagH / 2;
+      bagMesh.castShadow = !isSoftwareGl;
+      group.add(bagMesh);
+
+      // Die-cut oval handle punch-out
+      const ovalGeo = new THREE.TorusGeometry(0.35, 0.05, 16, 32);
+      ovalGeo.scale(1.8, 0.7, 1);
+      const handleRim = new THREE.Mesh(ovalGeo, goldMetalMaterial);
+      handleRim.position.set(0, bagH - 0.6, bagD / 2 + 0.02);
+      group.add(handleRim);
+
+      // Front Label
+      const labelGeo = new THREE.PlaneGeometry(bagW * 0.84, bagH * 0.62);
+      const labelMesh = new THREE.Mesh(labelGeo, labelMaterial);
+      labelMesh.position.set(0, bagH * 0.38, bagD / 2 + 0.02);
+      group.add(labelMesh);
+      break;
+    }
+
+    // -------------------------------------------------------------
+    // 14. SACHET / SASET MINI (KOPI / BUMBU / SAMBAL 4-SIDE SEAL)
+    // -------------------------------------------------------------
+    case 'sachet': {
+      const sachetW = 2.4;
+      const sachetH = 3.6;
+      const sachetD = 0.22;
+
+      // Slim sachet body
+      const sachetGeo = new THREE.BoxGeometry(sachetW, sachetH, sachetD);
+      const sachetMesh = new THREE.Mesh(sachetGeo, bodyMaterial);
+      sachetMesh.position.y = sachetH / 2;
+      sachetMesh.castShadow = !isSoftwareGl;
+      group.add(sachetMesh);
+
+      // Wide textured perimeter seal borders
+      const sealBorderGeo = new THREE.BoxGeometry(sachetW * 1.02, 0.35, sachetD * 1.1);
+      const topSeal = new THREE.Mesh(sealBorderGeo, goldMetalMaterial);
+      topSeal.position.set(0, sachetH - 0.17, 0);
+      group.add(topSeal);
+
+      const bottomSeal = new THREE.Mesh(sealBorderGeo, goldMetalMaterial);
+      bottomSeal.position.set(0, 0.17, 0);
+      group.add(bottomSeal);
+
+      // V-Notch Laser Tear Slit on left edge
+      const notchGeo = new THREE.ConeGeometry(0.1, 0.18, 3);
+      notchGeo.rotateZ(Math.PI / 2);
+      const notchMesh = new THREE.Mesh(notchGeo, darkCordMaterial);
+      notchMesh.position.set(-sachetW / 2 + 0.05, sachetH - 0.45, 0);
+      group.add(notchMesh);
+
+      // Centered Product Label
+      const labelGeo = new THREE.PlaneGeometry(sachetW * 0.85, sachetH * 0.68);
+      const labelMesh = new THREE.Mesh(labelGeo, labelMaterial);
+      labelMesh.position.set(0, sachetH / 2, sachetD / 2 + 0.02);
+      group.add(labelMesh);
+      break;
+    }
+
+    // -------------------------------------------------------------
+    // 15. PILLOW POUCH KEMBUNG (SNACK KERIPIK / BISKUIT)
+    // -------------------------------------------------------------
+    case 'flatpillow': {
+      const pillowW = 3.2;
+      const pillowH = 4.2;
+      const pillowD = 1.6;
+
+      // Puffed bulging pillow pouch
+      const pillowGeo = new THREE.SphereGeometry(1.6, 32, 24);
+      pillowGeo.scale(pillowW / 3.2, pillowH / 3.2, pillowD / 3.2);
+      const pillowMesh = new THREE.Mesh(pillowGeo, bodyMaterial);
+      pillowMesh.position.y = pillowH / 2;
+      pillowMesh.castShadow = !isSoftwareGl;
+      group.add(pillowMesh);
+
+      // Pinched Top and Bottom Crimp Seals
+      const crimpGeo = new THREE.BoxGeometry(pillowW * 1.02, 0.35, 0.14);
+      const topCrimp = new THREE.Mesh(crimpGeo, goldMetalMaterial);
+      topCrimp.position.set(0, pillowH - 0.15, 0);
+      group.add(topCrimp);
+
+      const bottomCrimp = new THREE.Mesh(crimpGeo, goldMetalMaterial);
+      bottomCrimp.position.set(0, 0.15, 0);
+      group.add(bottomCrimp);
+
+      // Curved Front Label
+      const labelGeo = new THREE.PlaneGeometry(pillowW * 0.78, pillowH * 0.65);
+      const labelMesh = new THREE.Mesh(labelGeo, labelMaterial);
+      labelMesh.position.set(0, pillowH / 2, (pillowD / 2) * 0.95 + 0.02);
+      group.add(labelMesh);
+      break;
+    }
+
+    // -------------------------------------------------------------
+    // 16. STANDING POUCH KLASIK (POUCH BERDIRI STANDAR)
+    // -------------------------------------------------------------
+    case 'pouch': {
+      const width = 3.2;
+      const height = 4.6;
+      const depth = 1.3;
+
+      const pouchGeo = new THREE.CylinderGeometry(width * 0.48, width * 0.52, height, 32, 1);
+      pouchGeo.scale(1, 1, depth / width);
+      const pouchMesh = new THREE.Mesh(pouchGeo, bodyMaterial);
+      pouchMesh.position.y = height / 2;
+      pouchMesh.castShadow = !isSoftwareGl;
+      group.add(pouchMesh);
+
+      // Top heat seal
       const sealGeo = new THREE.BoxGeometry(width * 1.05, 0.45, 0.14);
       const sealMesh = new THREE.Mesh(sealGeo, goldMetalMaterial);
       sealMesh.position.y = height + 0.15;
@@ -502,21 +967,17 @@ export const buildPackaging3DGroup = (
 
       // Front Curved Label
       const labelGeo = new THREE.PlaneGeometry(width * 0.84, height * 0.7);
-      const labelMat = new THREE.MeshPhysicalMaterial({
-        map: labelTexture,
-        roughness: isMatte ? 0.7 : 0.25,
-        clearcoat: isKraft ? 0 : 0.8,
-        transparent: true
-      });
-      const labelMesh = new THREE.Mesh(labelGeo, labelMat);
+      const labelMesh = new THREE.Mesh(labelGeo, labelMaterial);
       labelMesh.position.set(0, height * 0.48, (depth / 2) * 0.88 + 0.02);
       group.add(labelMesh);
       break;
     }
 
+    // -------------------------------------------------------------
+    // 17. KOTAK KARTON BOX (STANDARD FOLDING BOX)
+    // -------------------------------------------------------------
     case 'box':
     default: {
-      // Beveled Premium Packaging Box
       const boxW = 3.0;
       const boxH = 4.2;
       const boxD = 2.0;
@@ -536,19 +997,13 @@ export const buildPackaging3DGroup = (
 
       // Front Face Label
       const frontLabelGeo = new THREE.PlaneGeometry(boxW * 0.94, boxH * 0.9);
-      const labelMat = new THREE.MeshPhysicalMaterial({
-        map: labelTexture,
-        roughness: isMatte ? 0.6 : 0.2,
-        clearcoat: isKraft ? 0 : 0.85,
-        transparent: true
-      });
-      const frontMesh = new THREE.Mesh(frontLabelGeo, labelMat);
+      const frontMesh = new THREE.Mesh(frontLabelGeo, labelMaterial);
       frontMesh.position.set(0, boxH / 2, boxD / 2 + 0.02);
       group.add(frontMesh);
 
       // Top Face Accent Plate
       const topLabelGeo = new THREE.PlaneGeometry(boxW * 0.88, boxD * 0.85);
-      const topMesh = new THREE.Mesh(topLabelGeo, labelMat);
+      const topMesh = new THREE.Mesh(topLabelGeo, labelMaterial);
       topMesh.rotation.x = -Math.PI / 2;
       topMesh.position.set(0, boxH + 0.015, 0);
       group.add(topMesh);
