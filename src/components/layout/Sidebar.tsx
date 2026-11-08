@@ -14,6 +14,7 @@ import {
   X
 } from 'lucide-react';
 import { ActiveTab, Role } from '../../types';
+import { PWAInstallButton } from '../pwa/PWAInstallButton';
 
 interface SidebarProps {
   isCollapsed: boolean;
@@ -217,6 +218,17 @@ export const Sidebar: React.FC<SidebarProps> = ({
               </div>
             )}
           </button>
+        </div>
+
+        {/* PWA Install Button */}
+        <div className="pt-2">
+          {!isCollapsed || isMobileView ? (
+            <PWAInstallButton variant="sidebar" />
+          ) : (
+            <div className="flex justify-center">
+              <PWAInstallButton variant="compact" />
+            </div>
+          )}
         </div>
       </div>
 

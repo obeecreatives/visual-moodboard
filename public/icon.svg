@@ -1,0 +1,73 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="512" height="512">
+  <defs>
+    <linearGradient id="bgGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#0f172a" />
+      <stop offset="50%" stop-color="#0a0e1a" />
+      <stop offset="100%" stop-color="#05070d" />
+    </linearGradient>
+    <linearGradient id="redGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#ff3b47" />
+      <stop offset="60%" stop-color="#e31e2b" />
+      <stop offset="100%" stop-color="#990f18" />
+    </linearGradient>
+    <linearGradient id="goldGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#fde047" />
+      <stop offset="50%" stop-color="#eab308" />
+      <stop offset="100%" stop-color="#ca8a04" />
+    </linearGradient>
+    <filter id="glow" x="-20%" y="-20%" width="140%" height="140%">
+      <feGaussianBlur stdDeviation="16" result="blur" />
+      <feComposite in="SourceGraphic" in2="blur" operator="over" />
+    </filter>
+  </defs>
+
+  <!-- Background Squircle -->
+  <rect width="512" height="512" rx="112" fill="url(#bgGrad)" />
+  
+  <!-- Outer subtle tech border -->
+  <rect x="12" y="12" width="488" height="488" rx="100" fill="none" stroke="#e31e2b" stroke-opacity="0.3" stroke-width="4" />
+
+  <!-- Ambient Glow Behind Monogram -->
+  <circle cx="256" cy="256" r="140" fill="#e31e2b" opacity="0.22" filter="url(#glow)" />
+
+  <!-- Packaging Isometric Box Motif Behind O -->
+  <g transform="translate(256, 256) scale(0.92) translate(-256, -256)">
+    <!-- Top Face of 3D Box -->
+    <polygon points="256,110 376,176 256,242 136,176" fill="#1e293b" stroke="#334155" stroke-width="3" />
+    <!-- Left Face of 3D Box -->
+    <polygon points="136,176 256,242 256,380 136,314" fill="#0f172a" stroke="#1e293b" stroke-width="3" />
+    <!-- Right Face of 3D Box -->
+    <polygon points="256,242 376,176 376,314 256,380" fill="#182234" stroke="#1e293b" stroke-width="3" />
+    <!-- Flap Fold Accents -->
+    <polygon points="256,110 316,77 436,143 376,176" fill="#ca8a04" opacity="0.3" />
+    <polygon points="256,110 196,77 76,143 136,176" fill="#ca8a04" opacity="0.2" />
+  </g>
+
+  <!-- Bold 'O' Ring Monogram (obeecreatives) -->
+  <g>
+    <!-- Outer Ring -->
+    <path d="M 256 120
+             C 331.1 120 392 180.9 392 256
+             C 392 331.1 331.1 392 256 392
+             C 180.9 392 120 331.1 120 256
+             C 120 180.9 180.9 120 256 120 Z
+             M 256 186
+             C 217.3 186 186 217.3 186 256
+             C 186 294.7 217.3 326 256 326
+             C 294.7 326 326 294.7 326 256
+             C 326 217.3 294.7 186 256 186 Z"
+          fill="url(#redGrad)"
+          stroke="#ff6b76"
+          stroke-width="3"
+          filter="url(#glow)" />
+
+    <!-- Isometric Cut Ribbon / Creative Spark Accent inside O -->
+    <polygon points="256,206 286,256 256,306 226,256" fill="url(#goldGrad)" opacity="0.95" />
+    <circle cx="256" cy="256" r="6" fill="#ffffff" />
+  </g>
+
+  <!-- Bottom Brand Dot Accents -->
+  <circle cx="216" cy="432" r="5" fill="#e31e2b" opacity="0.6" />
+  <circle cx="256" cy="432" r="6" fill="#eab308" />
+  <circle cx="296" cy="432" r="5" fill="#e31e2b" opacity="0.6" />
+</svg>

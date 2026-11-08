@@ -16,6 +16,7 @@ import {
   Menu
 } from 'lucide-react';
 import { UserProfile, Role, BriefProject } from '../../types';
+import { PWAInstallButton } from '../pwa/PWAInstallButton';
 
 interface HeaderProps {
   isSidebarCollapsed: boolean;
@@ -218,6 +219,9 @@ export const Header: React.FC<HeaderProps> = ({
             <Share2 size={13} />
             <span className="hidden sm:inline">Export Guideline</span>
           </button>
+
+          {/* PWA Install Button for PC, Android, iOS */}
+          <PWAInstallButton variant="header" />
 
           {/* Theme Toggle (Dark / Light) */}
           <button

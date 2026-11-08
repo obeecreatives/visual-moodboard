@@ -36,6 +36,7 @@ import { ClientReviewView } from './components/views/ClientReviewView';
 import { GasCenterModal } from './components/modals/GasCenterModal';
 import { UserManagementModal } from './components/modals/UserManagementModal';
 import { ExportPdfModal } from './components/modals/ExportPdfModal';
+import { OfflineIndicator } from './components/pwa/OfflineIndicator';
 import { 
   FolderKanban, 
   FileText, 
@@ -707,6 +708,9 @@ export default function App() {
           gasUrl={gasUrl}
         />
       )}
+
+      {/* PWA Offline Indicator Toast */}
+      <OfflineIndicator />
 
     </div>
   );
